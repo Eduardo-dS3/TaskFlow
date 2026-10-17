@@ -14,7 +14,7 @@ class CommandView extends StatelessWidget {
     this.errorTitle = 'Não foi possível carregar os dados',
   });
 
-  final Command command;
+  final Command<Object?> command;
   final VoidCallback onRetry;
   final WidgetBuilder builder;
   final String errorTitle;

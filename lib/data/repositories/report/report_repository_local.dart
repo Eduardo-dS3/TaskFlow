@@ -20,7 +20,7 @@ class ReportRepositoryLocal implements ReportRepository {
     final cached = _cache[period];
     if (cached != null) return Result.ok(cached);
 
-    await Future.delayed(_latency);
+    await Future<void>.delayed(_latency);
     final report = _service.report(period);
     _cache[period] = report;
     return Result.ok(report);

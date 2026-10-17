@@ -67,7 +67,7 @@ class ReportsViewModel extends ChangeNotifier {
 
   Future<Result<void>> _exportPdf() async {
     // Simula a geração do documento executivo.
-    await Future.delayed(const Duration(seconds: 1));
+    await Future<void>.delayed(const Duration(seconds: 1));
     return const Result.ok(null);
   }
 }

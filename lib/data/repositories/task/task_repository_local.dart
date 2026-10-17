@@ -13,7 +13,7 @@ class TaskRepositoryLocal implements TaskRepository {
   final LocalDataService _service;
   final Duration _latency;
 
-  Future<void> _simulateNetwork() => Future.delayed(_latency);
+  Future<void> _simulateNetwork() => Future<void>.delayed(_latency);
 
   @override
   Future<Result<SprintOverview>> getSprintOverview() async {

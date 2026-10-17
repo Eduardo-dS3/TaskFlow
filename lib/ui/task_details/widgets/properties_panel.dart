@@ -109,12 +109,12 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                 ),
                 title: task.owner?.name ?? 'Sem responsável',
                 subtitle: task.owner?.role,
-                trailing: PopupMenuButton(
+                trailing: PopupMenuButton<void>(
                   tooltip: 'Trocar responsável',
                   icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
                   itemBuilder: (context) => [
                     for (final member in vm.members)
-                      PopupMenuItem(
+                      PopupMenuItem<void>(
                         onTap: () => vm.setOwner(member),
                         child: Text(member.name),
                       ),

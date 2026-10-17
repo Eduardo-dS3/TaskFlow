@@ -14,25 +14,25 @@ class ProjectRepositoryLocal implements ProjectRepository {
 
   @override
   Future<Result<PortfolioSummary>> getPortfolioSummary() async {
-    await Future.delayed(_latency);
+    await Future<void>.delayed(_latency);
     return Result.ok(_service.portfolioSummary);
   }
 
   @override
   Future<Result<List<Project>>> getProjects() async {
-    await Future.delayed(_latency);
+    await Future<void>.delayed(_latency);
     return Result.ok(_service.projects);
   }
 
   @override
   Future<Result<List<Client>>> getClients() async {
-    await Future.delayed(_latency);
+    await Future<void>.delayed(_latency);
     return Result.ok(_service.clients);
   }
 
   @override
   Future<Result<List<MemberAllocation>>> getAllocations() async {
-    await Future.delayed(_latency);
+    await Future<void>.delayed(_latency);
     return Result.ok(_service.allocations);
   }
 }

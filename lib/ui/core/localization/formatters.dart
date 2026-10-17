@@ -6,7 +6,7 @@ import '../../../domain/models/task.dart';
 
 /// Textos e formatações de exibição (camada de UI).
 abstract final class Formatters {
-  static final _shortDate = DateFormat("dd MMM", 'pt_BR');
+  static final _shortDate = DateFormat('dd MMM', 'pt_BR');
   static final _fullDate = DateFormat('dd/MM/yyyy', 'pt_BR');
   static final _time = DateFormat('HH:mm', 'pt_BR');
 
