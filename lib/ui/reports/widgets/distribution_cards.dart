@@ -21,15 +21,17 @@ class StatusDistributionCard extends StatelessWidget {
 
   final ProductivityReport report;
 
+  static const _order = [
+    TaskStatus.done,
+    TaskStatus.inProgress,
+    TaskStatus.pending,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final total = report.statusTotal;
     final entries = [
-      for (final status in [
-        TaskStatus.done,
-        TaskStatus.inProgress,
-        TaskStatus.pending,
-      ])
+      for (final status in _order)
         (status, report.statusDistribution[status] ?? 0),
     ];
 
@@ -51,86 +53,108 @@ class StatusDistributionCard extends StatelessWidget {
             spacing: 24,
             runSpacing: 16,
             children: [
-              SizedBox.square(
-                dimension: 120,
-                child: CustomPaint(
-                  painter: _DonutPainter(
-                    values: [
-                      for (final (status, value) in entries)
-                        (value.toDouble(), _statusColors[status]!),
-                    ],
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$total',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Text(
-                          'TAREFAS',
-                          style: TextStyle(fontSize: 10, letterSpacing: 0.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              _StatusDonut(entries: entries, total: total),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   for (final (status, value) in entries)
-                    Container(
-                      width: 150,
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.circle,
-                            size: 10,
-                            color: _statusColors[status],
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              status == TaskStatus.done
-                                  ? 'Concluídas'
-                                  : Formatters.taskStatus(status),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          Text(
-                            '$value',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            ' (${Formatters.percent(total == 0 ? 0 : value / total)})',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _StatusLegendItem(
+                      status: status,
+                      value: value,
+                      total: total,
                     ),
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusDonut extends StatelessWidget {
+  const _StatusDonut({required this.entries, required this.total});
+
+  final List<(TaskStatus, int)> entries;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 120,
+      child: CustomPaint(
+        painter: _DonutPainter(
+          values: [
+            for (final (status, value) in entries)
+              (value.toDouble(), _statusColors[status]!),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$total',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Text(
+                'TAREFAS',
+                style: TextStyle(fontSize: 10, letterSpacing: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusLegendItem extends StatelessWidget {
+  const _StatusLegendItem({
+    required this.status,
+    required this.value,
+    required this.total,
+  });
+
+  final TaskStatus status;
+  final int value;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final share = total == 0 ? 0.0 : value / total;
+    return Container(
+      width: 150,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.circle, size: 10, color: _statusColors[status]),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              Formatters.taskStatus(status),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+          Text(
+            '$value',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          Text(
+            ' (${Formatters.percent(share)})',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

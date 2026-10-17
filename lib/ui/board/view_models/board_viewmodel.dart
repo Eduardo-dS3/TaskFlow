@@ -137,10 +137,7 @@ class BoardViewModel extends ChangeNotifier {
 
     // Atualização otimista: a UI reflete a mudança imediatamente.
     final previous = _tasks;
-    final moved = task.copyWith(
-      status: status,
-      completedAt: status == TaskStatus.done ? now : null,
-    );
+    final moved = task.withStatus(status, now: now);
     _tasks = [for (final t in _tasks) t.id == task.id ? moved : t];
     notifyListeners();
 

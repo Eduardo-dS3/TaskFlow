@@ -13,25 +13,6 @@ class ProjectsFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = <(ProjectStatus?, String, int)>[
-      (null, 'Todos os Projetos', viewModel.totalCount),
-      (
-        ProjectStatus.inProgress,
-        'Em Andamento',
-        viewModel.countFor(ProjectStatus.inProgress),
-      ),
-      (
-        ProjectStatus.done,
-        'Concluídos',
-        viewModel.countFor(ProjectStatus.done),
-      ),
-      (
-        ProjectStatus.paused,
-        'Pausados',
-        viewModel.countFor(ProjectStatus.paused),
-      ),
-    ];
-
     return SurfaceCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -39,21 +20,7 @@ class ProjectsFilters extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final (status, label, count) in tabs)
-                      _Tab(
-                        label: label,
-                        count: count,
-                        selected: viewModel.statusFilter == status,
-                        onTap: () => viewModel.setStatusFilter(status),
-                      ),
-                  ],
-                ),
-              ),
+              Expanded(child: _StatusTabs(viewModel: viewModel)),
               _LayoutToggle(
                 icon: Icons.grid_view,
                 selected: viewModel.layout == ProjectsLayout.grid,
@@ -67,69 +34,125 @@ class ProjectsFilters extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth > 800
-                  ? 4
-                  : constraints.maxWidth > 500
-                  ? 2
-                  : 1;
-              final width =
-                  (constraints.maxWidth - 12 * (columns - 1)) / columns;
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  SizedBox(
-                    width: width,
-                    child: TextField(
-                      onChanged: viewModel.setQuery,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search, size: 18),
-                        hintText: 'Filtrar por nome de projeto...',
-                        fillColor: AppColors.surfaceMuted,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: DropdownButtonFormField<String?>(
-                      initialValue: viewModel.clientFilter,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.business_outlined, size: 18),
-                        fillColor: AppColors.surfaceMuted,
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          child: Text('Todos os Clientes'),
-                        ),
-                        for (final client in viewModel.clientNames)
-                          DropdownMenuItem(value: client, child: Text(client)),
-                      ],
-                      onChanged: viewModel.setClientFilter,
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: const _StaticSelect(
-                      icon: Icons.badge_outlined,
-                      label: 'Responsável Geral',
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: const _StaticSelect(
-                      icon: Icons.calendar_month_outlined,
-                      label: 'Período: Q4',
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+          _FilterFields(viewModel: viewModel),
         ],
       ),
+    );
+  }
+}
+
+/// Abas "Todos / Em Andamento / Concluídos / Pausados" com contadores.
+class _StatusTabs extends StatelessWidget {
+  const _StatusTabs({required this.viewModel});
+
+  final ProjectsViewModel viewModel;
+
+  static const _tabs = <(ProjectStatus?, String)>[
+    (null, 'Todos os Projetos'),
+    (ProjectStatus.inProgress, 'Em Andamento'),
+    (ProjectStatus.done, 'Concluídos'),
+    (ProjectStatus.paused, 'Pausados'),
+  ];
+
+  int _count(ProjectStatus? status) =>
+      status == null ? viewModel.totalCount : viewModel.countFor(status);
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final (status, label) in _tabs)
+          _Tab(
+            label: label,
+            count: _count(status),
+            selected: viewModel.statusFilter == status,
+            onTap: () => viewModel.setStatusFilter(status),
+          ),
+      ],
+    );
+  }
+}
+
+/// Campos de busca e seleção, distribuídos em até 4 colunas.
+class _FilterFields extends StatelessWidget {
+  const _FilterFields({required this.viewModel});
+
+  final ProjectsViewModel viewModel;
+
+  static int _columnsFor(double width) {
+    if (width > 800) return 4;
+    if (width > 500) return 2;
+    return 1;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columnsFor(constraints.maxWidth);
+        final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: width,
+              child: TextField(
+                onChanged: viewModel.setQuery,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search, size: 18),
+                  hintText: 'Filtrar por nome de projeto...',
+                  fillColor: AppColors.surfaceMuted,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _ClientSelect(viewModel: viewModel),
+            ),
+            SizedBox(
+              width: width,
+              child: const _StaticSelect(
+                icon: Icons.badge_outlined,
+                label: 'Responsável Geral',
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: const _StaticSelect(
+                icon: Icons.calendar_month_outlined,
+                label: 'Período: Q4',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ClientSelect extends StatelessWidget {
+  const _ClientSelect({required this.viewModel});
+
+  final ProjectsViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String?>(
+      initialValue: viewModel.clientFilter,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        prefixIcon: Icon(Icons.business_outlined, size: 18),
+        fillColor: AppColors.surfaceMuted,
+      ),
+      items: [
+        const DropdownMenuItem(child: Text('Todos os Clientes')),
+        for (final client in viewModel.clientNames)
+          DropdownMenuItem(value: client, child: Text(client)),
+      ],
+      onChanged: viewModel.setClientFilter,
     );
   }
 }

@@ -153,25 +153,21 @@ class Task {
   double get hoursProgress =>
       estimatedHours == 0 ? 0 : (loggedHours / estimatedHours).clamp(0, 1);
 
+  /// Cópia com os campos editáveis alterados.
+  ///
+  /// Status e data de conclusão mudam juntos, por isso ficam em [withStatus].
   Task copyWith({
     String? title,
     String? summary,
-    TaskStatus? status,
     TaskPriority? priority,
-    String? category,
     String? description,
     String? projectName,
     String? clientName,
-    String? clientContract,
     Member? owner,
     DateTime? startDate,
     DateTime? dueDate,
-    DateTime? completedAt,
-    double? loggedHours,
-    double? estimatedHours,
     List<String>? tags,
     List<Subtask>? subtasks,
-    List<Attachment>? attachments,
     List<TaskComment>? comments,
     int? commentCount,
   }) {
@@ -180,33 +176,75 @@ class Task {
       code: code,
       title: title ?? this.title,
       summary: summary ?? this.summary,
-      status: status ?? this.status,
+      status: status,
       priority: priority ?? this.priority,
-      category: category ?? this.category,
+      category: category,
       description: description ?? this.description,
       requirements: requirements,
       payloadExample: payloadExample,
       sprint: sprint,
       projectName: projectName ?? this.projectName,
       clientName: clientName ?? this.clientName,
-      clientContract: clientContract ?? this.clientContract,
+      clientContract: clientContract,
       isPrivate: isPrivate,
       owner: owner ?? this.owner,
       assignees: assignees,
       startDate: startDate ?? this.startDate,
       dueDate: dueDate ?? this.dueDate,
-      completedAt: completedAt ?? this.completedAt,
-      loggedHours: loggedHours ?? this.loggedHours,
-      estimatedHours: estimatedHours ?? this.estimatedHours,
+      completedAt: completedAt,
+      loggedHours: loggedHours,
+      estimatedHours: estimatedHours,
       progress: progress,
       reviewed: reviewed,
       tags: tags ?? this.tags,
       subtasks: subtasks ?? this.subtasks,
-      attachments: attachments ?? this.attachments,
+      attachments: attachments,
       comments: comments ?? this.comments,
       commentCount: commentCount ?? this.commentCount,
     );
   }
+
+  /// Cópia com novo [status]. A data de conclusão passa a ser [now] quando a
+  /// tarefa é concluída e é limpa quando ela sai de "Concluídas".
+  Task withStatus(TaskStatus status, {required DateTime now}) {
+    return Task(
+      id: id,
+      code: code,
+      title: title,
+      summary: summary,
+      status: status,
+      priority: priority,
+      category: category,
+      description: description,
+      requirements: requirements,
+      payloadExample: payloadExample,
+      sprint: sprint,
+      projectName: projectName,
+      clientName: clientName,
+      clientContract: clientContract,
+      isPrivate: isPrivate,
+      owner: owner,
+      assignees: assignees,
+      startDate: startDate,
+      dueDate: dueDate,
+      completedAt: status == TaskStatus.done ? now : null,
+      loggedHours: loggedHours,
+      estimatedHours: estimatedHours,
+      progress: progress,
+      reviewed: reviewed,
+      tags: tags,
+      subtasks: subtasks,
+      attachments: attachments,
+      comments: comments,
+      commentCount: commentCount,
+    );
+  }
+
+  /// Cópia com [comment] no topo da discussão.
+  Task withComment(TaskComment comment) => copyWith(
+    comments: [comment, ...comments],
+    commentCount: commentCount + 1,
+  );
 }
 
 /// Indicadores consolidados da sprint ativa (cards do topo do quadro).

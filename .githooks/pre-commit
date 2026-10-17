@@ -51,11 +51,19 @@ echo -e "${GREEN}✔ Análise estática aprovada (zero warnings/erros).${NC}"
 # ------------------------------------------------------------------------------
 # 4. Verificaçao de complexidade de código
 # ------------------------------------------------------------------------------
-echo -e "\n${BLUE}▶ Verificando complexidade do código (dart_code_linter)...${NC}"
-dart run dart_code_linter:metrics analyze $STAGED_DART_FILES --set-exit-on-violation-level=warning
+echo -e "\n${BLUE}▶ [3/3] Verificando complexidade do código (dart_code_linter)...${NC}"
+
+# O 'metrics analyze' só aceita diretórios, então analisamos as pastas que
+# contêm os arquivos Dart em stage.
+STAGED_DART_DIRS=$(for file in $STAGED_DART_FILES; do dirname "$file"; done | sort -u)
+
+dart run dart_code_linter:metrics analyze $STAGED_DART_DIRS --set-exit-on-violation-level=warning
 if [ $? -ne 0 ]; then
   echo -e "\n${RED}❌ Violação de complexidade ou aninhamento excessivo detectada!${NC}"
   echo -e "${YELLOW}💡 Dica: Reduza o aninhamento de loops/ifs ou divida a função em partes menores.${NC}\n"
   exit 1
 fi
-  echo -e "${GREEN}✔ Métricas de complexidade aprovadas.${NC}"
+echo -e "${GREEN}✔ Métricas de complexidade aprovadas.${NC}"
+
+echo -e "\n${GREEN}✅ Todas as validações passaram. Seguindo com o commit.${NC}\n"
+exit 0

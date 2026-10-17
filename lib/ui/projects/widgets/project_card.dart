@@ -55,54 +55,9 @@ class ProjectCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(child: _statusPill()),
-                    const Spacer(),
-                    if (_priorityPill() case final pill?) Flexible(child: pill),
-                    const Icon(Icons.more_vert, size: 18),
-                  ],
-                ),
+                _badges(),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(_icon, color: AppColors.primary),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            project.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.business, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                project.clientName,
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                _title(),
                 const SizedBox(height: 10),
                 Text(
                   project.description,
@@ -115,44 +70,13 @@ class ProjectCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Text(
-                      project.status == ProjectStatus.done
-                          ? 'Status Final'
-                          : 'Progresso de Sprints',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    const Spacer(),
-                    Text(
-                      Formatters.percent(project.progress),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: accent,
-                      ),
-                    ),
-                  ],
-                ),
+                _progressHeader(accent),
                 const SizedBox(height: 6),
                 Meter(value: project.progress, color: accent),
                 const SizedBox(height: 8),
                 _progressInfo(),
                 const SizedBox(height: 20),
-                Row(
-                  children: [
-                    AvatarStack(
-                      initials: [for (final m in project.team) m.initials],
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: _deadline(),
-                      ),
-                    ),
-                  ],
-                ),
+                _footer(),
               ],
             ),
           ),
@@ -160,6 +84,79 @@ class ProjectCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _badges() => Row(
+    children: [
+      Flexible(child: _statusPill()),
+      const Spacer(),
+      if (_priorityPill() case final pill?) Flexible(child: pill),
+      const Icon(Icons.more_vert, size: 18),
+    ],
+  );
+
+  Widget _title() => Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(_icon, color: AppColors.primary),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              project.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.business, size: 12),
+                const SizedBox(width: 4),
+                Text(project.clientName, style: const TextStyle(fontSize: 11)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+
+  Widget _progressHeader(Color accent) => Row(
+    children: [
+      Text(
+        project.status == ProjectStatus.done
+            ? 'Status Final'
+            : 'Progresso de Sprints',
+        style: const TextStyle(fontSize: 11),
+      ),
+      const Spacer(),
+      Text(
+        Formatters.percent(project.progress),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: accent,
+        ),
+      ),
+    ],
+  );
+
+  Widget _footer() => Row(
+    children: [
+      AvatarStack(initials: [for (final m in project.team) m.initials]),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Align(alignment: Alignment.centerRight, child: _deadline()),
+      ),
+    ],
+  );
 
   Widget _statusPill() => switch (project.status) {
     ProjectStatus.inProgress => const Pill(

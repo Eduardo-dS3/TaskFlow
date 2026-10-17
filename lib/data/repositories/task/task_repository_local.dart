@@ -93,10 +93,6 @@ class TaskRepositoryLocal implements TaskRepository {
       body: body,
       createdAt: DateTime.now(),
     );
-    final updated = task.copyWith(
-      comments: [comment, ...task.comments],
-      commentCount: task.commentCount + 1,
-    );
-    return Result.ok(_service.upsertTask(updated));
+    return Result.ok(_service.upsertTask(task.withComment(comment)));
   }
 }

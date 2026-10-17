@@ -82,12 +82,8 @@ class TaskDetailsViewModel extends ChangeNotifier {
   void updateDescription(String value) =>
       _update((t) => t.copyWith(description: value));
 
-  void setStatus(TaskStatus status) => _update(
-    (t) => t.copyWith(
-      status: status,
-      completedAt: status == TaskStatus.done ? now : null,
-    ),
-  );
+  void setStatus(TaskStatus status) =>
+      _update((t) => t.withStatus(status, now: now));
 
   void setPriority(TaskPriority priority) =>
       _update((t) => t.copyWith(priority: priority));

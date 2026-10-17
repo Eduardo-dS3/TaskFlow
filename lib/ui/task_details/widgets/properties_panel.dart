@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../domain/models/task.dart';
 import '../../core/localization/formatters.dart';
 import '../../core/themes/colors.dart';
 import '../../core/ui/avatar.dart';
@@ -19,19 +20,6 @@ class PropertiesPanel extends StatefulWidget {
 }
 
 class _PropertiesPanelState extends State<PropertiesPanel> {
-  final _tagController = TextEditingController();
-
-  @override
-  void dispose() {
-    _tagController.dispose();
-    super.dispose();
-  }
-
-  void _addTag() {
-    widget.viewModel.addTag(_tagController.text);
-    _tagController.clear();
-  }
-
   Future<void> _pickDate(
     DateTime? initial,
     ValueChanged<DateTime> onPicked,
@@ -53,7 +41,6 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       listenable: vm,
       builder: (context, _) {
         final task = vm.task!;
-        final remaining = task.estimatedHours - task.loggedHours;
         return SurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -67,216 +54,333 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                 ),
               ),
               const Divider(height: 24),
-              const _Label(
-                icon: Icons.folder_outlined,
-                text: 'Projeto Associado',
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: task.projectName,
-                isExpanded: true,
-                hint: const Text('Selecione um projeto'),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-                items: [
-                  for (final name in vm.projectNames)
-                    DropdownMenuItem(value: name, child: Text(name)),
-                ],
-                onChanged: (value) {
-                  if (value != null) vm.setProject(value);
-                },
-              ),
+              _ProjectField(viewModel: vm),
               if (task.clientName case final client?) ...[
                 const SizedBox(height: 16),
-                const _Label(icon: Icons.business_outlined, text: 'Cliente'),
-                _InfoTile(
-                  leading: _initialsBox(client),
-                  title: client,
-                  subtitle: task.clientContract,
-                ),
+                _ClientField(client: client, contract: task.clientContract),
               ],
               const SizedBox(height: 16),
-              const _Label(
-                icon: Icons.person_outline,
-                text: 'Responsável Principal',
-              ),
-              _InfoTile(
-                leading: InitialsAvatar(
-                  initials: task.owner?.initials ?? '?',
-                  size: 34,
-                ),
-                title: task.owner?.name ?? 'Sem responsável',
-                subtitle: task.owner?.role,
-                trailing: PopupMenuButton<void>(
-                  tooltip: 'Trocar responsável',
-                  icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
-                  itemBuilder: (context) => [
-                    for (final member in vm.members)
-                      PopupMenuItem<void>(
-                        onTap: () => vm.setOwner(member),
-                        child: Text(member.name),
-                      ),
-                  ],
-                ),
+              _OwnerField(viewModel: vm),
+              const SizedBox(height: 16),
+              _DatesRow(
+                task: task,
+                onPickStart: () => _pickDate(task.startDate, vm.setStartDate),
+                onPickDue: () => _pickDate(task.dueDate, vm.setDueDate),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _DateField(
-                      label: 'Início',
-                      icon: Icons.calendar_today_outlined,
-                      date: task.startDate,
-                      onTap: () => _pickDate(task.startDate, vm.setStartDate),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DateField(
-                      label: 'Prazo Final',
-                      icon: Icons.flag_outlined,
-                      date: task.dueDate,
-                      danger: true,
-                      onTap: () => _pickDate(task.dueDate, vm.setDueDate),
-                    ),
-                  ),
-                ],
-              ),
+              _HoursCard(task: task),
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.timer_outlined, size: 16),
-                        const SizedBox(width: 6),
-                        const Expanded(
-                          child: Text(
-                            'Horas Registradas',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        Text(
-                          '${Formatters.hours(task.loggedHours)} / '
-                          '${Formatters.hours(task.estimatedHours)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Meter(
-                      value: task.hoursProgress,
-                      height: 8,
-                      background: AppColors.border,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          '${Formatters.percent(task.hoursProgress)} consumido',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${Formatters.hours(remaining < 0 ? 0 : remaining)} restantes',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.success,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Expanded(
-                    child: _Label(icon: Icons.label_outline, text: 'Etiquetas'),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      '+ Gerenciar',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final tag in task.tags)
-                    Pill(
-                      label: '#$tag',
-                      fontSize: 12,
-                      foreground: tag.contains('Prioridade')
-                          ? AppColors.warning
-                          : AppColors.textPrimary,
-                      background: tag.contains('Prioridade')
-                          ? AppColors.warningSoft
-                          : AppColors.primarySoft,
-                      onDeleted: () => vm.removeTag(tag),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _tagController,
-                onSubmitted: (_) => _addTag(),
-                decoration: InputDecoration(
-                  hintText: 'Adicionar nova tag...',
-                  fillColor: AppColors.surfaceMuted,
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.add, color: AppColors.primary),
-                    onPressed: _addTag,
-                  ),
-                ),
-              ),
+              _TagsSection(viewModel: vm),
             ],
           ),
         );
       },
     );
   }
+}
 
-  Widget _initialsBox(String name) {
-    final parts = name.split(' ');
+class _ProjectField extends StatelessWidget {
+  const _ProjectField({required this.viewModel});
+
+  final TaskDetailsViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Label(icon: Icons.folder_outlined, text: 'Projeto Associado'),
+        DropdownButtonFormField<String>(
+          initialValue: viewModel.task!.projectName,
+          isExpanded: true,
+          hint: const Text('Selecione um projeto'),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+          items: [
+            for (final name in viewModel.projectNames)
+              DropdownMenuItem(value: name, child: Text(name)),
+          ],
+          onChanged: (value) {
+            if (value != null) viewModel.setProject(value);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ClientField extends StatelessWidget {
+  const _ClientField({required this.client, this.contract});
+
+  final String client;
+  final String? contract;
+
+  String get _initials {
+    final parts = client.split(' ');
     final initials = parts.length > 1
         ? parts[0][0] + parts[1][0]
-        : name.substring(0, 2);
-    return Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        initials.toUpperCase(),
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: AppColors.primary,
-          fontSize: 12,
+        : client.substring(0, 2);
+    return initials.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Label(icon: Icons.business_outlined, text: 'Cliente'),
+        _InfoTile(
+          leading: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              _initials,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          title: client,
+          subtitle: contract,
         ),
+      ],
+    );
+  }
+}
+
+class _OwnerField extends StatelessWidget {
+  const _OwnerField({required this.viewModel});
+
+  final TaskDetailsViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final owner = viewModel.task!.owner;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Label(icon: Icons.person_outline, text: 'Responsável Principal'),
+        _InfoTile(
+          leading: InitialsAvatar(initials: owner?.initials ?? '?', size: 34),
+          title: owner?.name ?? 'Sem responsável',
+          subtitle: owner?.role,
+          trailing: PopupMenuButton<void>(
+            tooltip: 'Trocar responsável',
+            icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
+            itemBuilder: (context) => [
+              for (final member in viewModel.members)
+                PopupMenuItem<void>(
+                  onTap: () => viewModel.setOwner(member),
+                  child: Text(member.name),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DatesRow extends StatelessWidget {
+  const _DatesRow({
+    required this.task,
+    required this.onPickStart,
+    required this.onPickDue,
+  });
+
+  final Task task;
+  final VoidCallback onPickStart;
+  final VoidCallback onPickDue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _DateField(
+            label: 'Início',
+            icon: Icons.calendar_today_outlined,
+            date: task.startDate,
+            onTap: onPickStart,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _DateField(
+            label: 'Prazo Final',
+            icon: Icons.flag_outlined,
+            date: task.dueDate,
+            danger: true,
+            onTap: onPickDue,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Horas registradas vs. estimadas.
+class _HoursCard extends StatelessWidget {
+  const _HoursCard({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = task.estimatedHours - task.loggedHours;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(8),
       ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timer_outlined, size: 16),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Horas Registradas',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+              Text(
+                '${Formatters.hours(task.loggedHours)} / '
+                '${Formatters.hours(task.estimatedHours)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Meter(
+            value: task.hoursProgress,
+            height: 8,
+            background: AppColors.border,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                '${Formatters.percent(task.hoursProgress)} consumido',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${Formatters.hours(remaining < 0 ? 0 : remaining)} restantes',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Etiquetas da tarefa com campo para adicionar novas.
+class _TagsSection extends StatefulWidget {
+  const _TagsSection({required this.viewModel});
+
+  final TaskDetailsViewModel viewModel;
+
+  @override
+  State<_TagsSection> createState() => _TagsSectionState();
+}
+
+class _TagsSectionState extends State<_TagsSection> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _addTag() {
+    widget.viewModel.addTag(_controller.text);
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.viewModel;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: _Label(icon: Icons.label_outline, text: 'Etiquetas'),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: const Text('+ Gerenciar', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final tag in vm.task!.tags)
+              _TagPill(tag: tag, onDeleted: () => vm.removeTag(tag)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _controller,
+          onSubmitted: (_) => _addTag(),
+          decoration: InputDecoration(
+            hintText: 'Adicionar nova tag...',
+            fillColor: AppColors.surfaceMuted,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add, color: AppColors.primary),
+              onPressed: _addTag,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TagPill extends StatelessWidget {
+  const _TagPill({required this.tag, required this.onDeleted});
+
+  final String tag;
+  final VoidCallback onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final highlight = tag.contains('Prioridade');
+    return Pill(
+      label: '#$tag',
+      fontSize: 12,
+      foreground: highlight ? AppColors.warning : AppColors.textPrimary,
+      background: highlight ? AppColors.warningSoft : AppColors.primarySoft,
+      onDeleted: onDeleted,
     );
   }
 }

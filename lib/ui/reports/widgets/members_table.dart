@@ -17,146 +17,195 @@ class MembersTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final report = viewModel.report!;
-    final members = viewModel.visibleMembers;
     return SurfaceCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: SectionTitle(
-              title: 'Performance por Membro da Equipe & Alocação',
-              subtitle:
-                  'Indicadores individuais de SLA, vazão e balanço de '
-                  'carga de trabalho',
-              trailing: Wrap(
-                spacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.filter_list, size: 18),
-                    label: const Text('Filtrar'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('CSV'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 820),
-              child: LayoutBuilder(
-                builder: (context, _) => DataTable(
-                  headingRowColor: const WidgetStatePropertyAll(
-                    AppColors.primarySoft,
-                  ),
-                  headingTextStyle: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 0.4,
-                  ),
-                  dataRowMinHeight: 60,
-                  dataRowMaxHeight: 64,
-                  columns: const [
-                    DataColumn(label: Text('MEMBRO / RESPONSÁVEL')),
-                    DataColumn(
-                      label: Text('TAREFAS\nATRIBUÍDAS'),
-                      numeric: true,
-                    ),
-                    DataColumn(label: Text('CONCLUÍDAS'), numeric: true),
-                    DataColumn(label: Text('EM\nANDAMENTO'), numeric: true),
-                    DataColumn(label: Text('EFICIÊNCIA\n(NO PRAZO)')),
-                    DataColumn(label: Text('CARGA DE\nTRABALHO')),
-                  ],
-                  rows: [
-                    for (final m in members)
-                      DataRow(
-                        cells: [
-                          DataCell(_MemberCell(member: m)),
-                          DataCell(_bold('${m.assigned}')),
-                          DataCell(_bold('${m.completed}', AppColors.primary)),
-                          DataCell(Text('${m.inProgress}')),
-                          DataCell(_EfficiencyCell(efficiency: m.efficiency)),
-                          DataCell(_WorkloadPill(member: m)),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const Padding(padding: EdgeInsets.all(20), child: _TableHeader()),
+          _PerformanceTable(members: viewModel.visibleMembers),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Exibindo', style: TextStyle(fontSize: 12)),
-                    const SizedBox(width: 8),
-                    Pill(
-                      label:
-                          '${members.length} de ${report.totalMembers} membros',
-                      fontSize: 12,
-                      foreground: AppColors.textPrimary,
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: viewModel.page > 0
-                          ? () => viewModel.setPage(viewModel.page - 1)
-                          : null,
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    for (var i = 0; i < viewModel.pageCount; i++)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: i == viewModel.page
-                            ? IconButton.filled(
-                                onPressed: () {},
-                                icon: Text(
-                                  '${i + 1}',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              )
-                            : IconButton(
-                                onPressed: () => viewModel.setPage(i),
-                                icon: Text('${i + 1}'),
-                              ),
-                      ),
-                    IconButton(
-                      onPressed: viewModel.page < viewModel.pageCount - 1
-                          ? () => viewModel.setPage(viewModel.page + 1)
-                          : null,
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            child: _Pagination(viewModel: viewModel),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _bold(String text, [Color color = AppColors.textPrimary]) => Text(
-    text,
-    style: TextStyle(fontWeight: FontWeight.w600, color: color),
+class _TableHeader extends StatelessWidget {
+  const _TableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionTitle(
+      title: 'Performance por Membro da Equipe & Alocação',
+      subtitle:
+          'Indicadores individuais de SLA, vazão e balanço de '
+          'carga de trabalho',
+      trailing: Wrap(
+        spacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.filter_list, size: 18),
+            label: const Text('Filtrar'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.download_outlined, size: 18),
+            label: const Text('CSV'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PerformanceTable extends StatelessWidget {
+  const _PerformanceTable({required this.members});
+
+  final List<MemberPerformance> members;
+
+  static const _columns = [
+    DataColumn(label: Text('MEMBRO / RESPONSÁVEL')),
+    DataColumn(label: Text('TAREFAS\nATRIBUÍDAS'), numeric: true),
+    DataColumn(label: Text('CONCLUÍDAS'), numeric: true),
+    DataColumn(label: Text('EM\nANDAMENTO'), numeric: true),
+    DataColumn(label: Text('EFICIÊNCIA\n(NO PRAZO)')),
+    DataColumn(label: Text('CARGA DE\nTRABALHO')),
+  ];
+
+  DataRow _row(MemberPerformance member) => DataRow(
+    cells: [
+      DataCell(_MemberCell(member: member)),
+      DataCell(_Count(value: member.assigned)),
+      DataCell(_Count(value: member.completed, color: AppColors.primary)),
+      DataCell(Text('${member.inProgress}')),
+      DataCell(_EfficiencyCell(efficiency: member.efficiency)),
+      DataCell(_WorkloadPill(member: member)),
+    ],
   );
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 820),
+        child: DataTable(
+          headingRowColor: const WidgetStatePropertyAll(AppColors.primarySoft),
+          headingTextStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.4,
+          ),
+          dataRowMinHeight: 60,
+          dataRowMaxHeight: 64,
+          columns: _columns,
+          rows: [for (final member in members) _row(member)],
+        ),
+      ),
+    );
+  }
+}
+
+class _Pagination extends StatelessWidget {
+  const _Pagination({required this.viewModel});
+
+  final ReportsViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final page = viewModel.page;
+    final lastPage = viewModel.pageCount - 1;
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Exibindo', style: TextStyle(fontSize: 12)),
+            const SizedBox(width: 8),
+            Pill(
+              label:
+                  '${viewModel.visibleMembers.length} de '
+                  '${viewModel.report!.totalMembers} membros',
+              fontSize: 12,
+              foreground: AppColors.textPrimary,
+            ),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: page > 0 ? () => viewModel.setPage(page - 1) : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            for (var i = 0; i <= lastPage; i++)
+              _PageButton(
+                number: i + 1,
+                selected: i == page,
+                onPressed: () => viewModel.setPage(i),
+              ),
+            IconButton(
+              onPressed: page < lastPage
+                  ? () => viewModel.setPage(page + 1)
+                  : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PageButton extends StatelessWidget {
+  const _PageButton({
+    required this.number,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final int number;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: selected
+          ? IconButton.filled(
+              onPressed: () {},
+              icon: Text(
+                '$number',
+                style: const TextStyle(color: Colors.white),
+              ),
+            )
+          : IconButton(onPressed: onPressed, icon: Text('$number')),
+    );
+  }
+}
+
+class _Count extends StatelessWidget {
+  const _Count({required this.value, this.color = AppColors.textPrimary});
+
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '$value',
+      style: TextStyle(fontWeight: FontWeight.w600, color: color),
+    );
+  }
 }
 
 class _MemberCell extends StatelessWidget {
@@ -212,13 +261,16 @@ class _EfficiencyCell extends StatelessWidget {
 
   final double efficiency;
 
+  /// Verde a partir de 94%, azul a partir de 85% e vermelho abaixo disso.
+  Color get _color {
+    if (efficiency >= 0.94) return AppColors.success;
+    if (efficiency >= 0.85) return AppColors.info;
+    return AppColors.danger;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final color = efficiency >= 0.94
-        ? AppColors.success
-        : efficiency >= 0.85
-        ? AppColors.info
-        : AppColors.danger;
+    final color = _color;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
