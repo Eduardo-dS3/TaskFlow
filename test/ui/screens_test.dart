@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:taskflow/ui/auth/view_models/login_viewmodel.dart';
+import 'package:taskflow/ui/auth/widgets/login_screen.dart';
 import 'package:taskflow/ui/board/view_models/board_viewmodel.dart';
 import 'package:taskflow/ui/board/widgets/board_screen.dart';
 import 'package:taskflow/ui/core/themes/theme.dart';
@@ -15,30 +17,44 @@ import '../../testing/fakes/fake_repositories.dart';
 
 /// Testes de widget: cada tela é renderizada com repositórios falsos em
 /// larguras de desktop e celular, garantindo que não há overflow.
+Future<void> pump(WidgetTester tester, Widget screen, Size size) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: screen),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
-  Future<void> pump(WidgetTester tester, Widget screen, Size size) async {
-    tester.view.physicalSize = size;
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        home: Scaffold(body: screen),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
   for (final size in const [Size(1440, 1000), Size(390, 844)]) {
     group('${size.width.toInt()}px', () {
+      late FakeDependencies deps;
+
+      setUp(() => deps = FakeDependencies());
+
+      testWidgets('Login', (tester) async {
+        await pump(
+          tester,
+          LoginScreen(viewModel: LoginViewModel(authRepository: deps.auth)),
+          size,
+        );
+        expect(find.text('Entrar'), findsWidgets);
+      });
+
       testWidgets('Quadro de tarefas', (tester) async {
         await pump(
           tester,
           BoardScreen(
             viewModel: BoardViewModel(
-              taskRepository: FakeTaskRepository(),
+              loadBoard: deps.loadBoard,
+              taskRepository: deps.tasks,
               clock: testClock,
             ),
           ),
@@ -49,14 +65,14 @@ void main() {
       });
 
       testWidgets('Detalhes da tarefa', (tester) async {
-        final service = fakeDataService();
         await pump(
           tester,
           TaskDetailsScreen(
             viewModel: TaskDetailsViewModel(
-              taskRepository: FakeTaskRepository(service),
-              userRepository: fakeUserRepository(service),
-              projectRepository: fakeProjectRepository(service),
+              taskRepository: deps.tasks,
+              userRepository: deps.users,
+              projectRepository: deps.projects,
+              settingsRepository: deps.settings,
               taskId: 't-1048',
               clock: testClock,
             ),
@@ -72,7 +88,9 @@ void main() {
           tester,
           ProjectsScreen(
             viewModel: ProjectsViewModel(
-              projectRepository: fakeProjectRepository(),
+              loadPortfolio: deps.loadPortfolio,
+              projectRepository: deps.projects,
+              userRepository: deps.users,
               clock: testClock,
             ),
           ),
@@ -87,7 +105,10 @@ void main() {
           tester,
           ReportsScreen(
             viewModel: ReportsViewModel(
-              reportRepository: fakeReportRepository(),
+              buildReport: deps.buildReport,
+              projectRepository: deps.projects,
+              settingsRepository: deps.settings,
+              clock: testClock,
             ),
           ),
           size,

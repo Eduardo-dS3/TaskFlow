@@ -8,9 +8,10 @@ import '../../core/ui/surface_card.dart';
 
 /// "Clientes Ativos" com o tier contratual de cada um.
 class ClientsCard extends StatelessWidget {
-  const ClientsCard({super.key, required this.clients});
+  const ClientsCard({super.key, required this.clients, required this.onManage});
 
   final List<Client> clients;
+  final VoidCallback onManage;
 
   (Color, Color) _tierColors(ClientTier tier) => switch (tier) {
     ClientTier.enterprise => (Colors.white, AppColors.primary),
@@ -95,15 +96,23 @@ class ClientsCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 6),
+          if (clients.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Nenhum cliente cadastrado.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
           TextButton.icon(
-            onPressed: () {},
+            onPressed: onManage,
             style: TextButton.styleFrom(
               backgroundColor: AppColors.primarySoft,
               foregroundColor: AppColors.textPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             icon: const Icon(Icons.person_add_alt, size: 18),
-            label: const Text('Gerenciar Contratos & Clientes'),
+            label: const Text('Gerenciar Clientes'),
           ),
         ],
       ),

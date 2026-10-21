@@ -35,7 +35,7 @@ class Subtask {
   );
 }
 
-enum AttachmentType { image, pdf, json }
+enum AttachmentType { image, pdf, json, other }
 
 class Attachment {
   const Attachment({
@@ -44,13 +44,31 @@ class Attachment {
     required this.sizeInBytes,
     required this.uploadedAt,
     required this.type,
+    this.fileName,
+    this.uploadedBy,
   });
 
   final String id;
+
+  /// Nome original do arquivo enviado.
   final String name;
   final int sizeInBytes;
   final DateTime uploadedAt;
   final AttachmentType type;
+
+  /// Nome do arquivo armazenado no servidor.
+  final String? fileName;
+  final Member? uploadedBy;
+
+  static AttachmentType typeFor(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    return switch (extension) {
+      'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' => AttachmentType.image,
+      'pdf' => AttachmentType.pdf,
+      'json' => AttachmentType.json,
+      _ => AttachmentType.other,
+    };
+  }
 }
 
 class TaskComment {
@@ -71,9 +89,214 @@ class TaskComment {
   final bool ciApproved;
 }
 
+/// Datas e esforço (planejado e registrado) de uma tarefa.
+class TaskSchedule {
+  const TaskSchedule({
+    this.startDate,
+    this.dueDate,
+    this.completedAt,
+    this.estimatedHours = 0,
+    this.loggedHours = 0,
+  });
+
+  final DateTime? startDate;
+  final DateTime? dueDate;
+  final DateTime? completedAt;
+  final double estimatedHours;
+  final double loggedHours;
+
+  double get hoursProgress =>
+      estimatedHours == 0 ? 0 : (loggedHours / estimatedHours).clamp(0, 1);
+
+  /// Cópia com novas datas de planejamento (`null` remove a data).
+  TaskSchedule withDates({
+    required DateTime? startDate,
+    required DateTime? dueDate,
+  }) => TaskSchedule(
+    startDate: startDate,
+    dueDate: dueDate,
+    completedAt: completedAt,
+    estimatedHours: estimatedHours,
+    loggedHours: loggedHours,
+  );
+
+  TaskSchedule withHours({
+    required double estimatedHours,
+    required double loggedHours,
+  }) => TaskSchedule(
+    startDate: startDate,
+    dueDate: dueDate,
+    completedAt: completedAt,
+    estimatedHours: estimatedHours,
+    loggedHours: loggedHours,
+  );
+
+  TaskSchedule withCompletion(DateTime? completedAt) => TaskSchedule(
+    startDate: startDate,
+    dueDate: dueDate,
+    completedAt: completedAt,
+    estimatedHours: estimatedHours,
+    loggedHours: loggedHours,
+  );
+}
+
+/// Projeto, cliente e pessoas ligadas a uma tarefa.
+class TaskLinks {
+  const TaskLinks({
+    this.projectId,
+    this.projectName,
+    this.clientName,
+    this.clientContract,
+    this.owner,
+    this.assignees = const [],
+  });
+
+  final String? projectId;
+  final String? projectName;
+  final String? clientName;
+  final String? clientContract;
+
+  /// Responsável principal.
+  final Member? owner;
+
+  /// Demais participantes.
+  final List<Member> assignees;
+
+  /// Responsável e participantes, sem repetição.
+  List<Member> get people => {?owner, ...assignees}.toList();
+
+  /// Cópia ligada a outro projeto (`id` nulo desvincula a tarefa).
+  TaskLinks withProject({
+    required String? id,
+    required String? name,
+    required String? clientName,
+  }) => TaskLinks(
+    projectId: id,
+    projectName: name,
+    clientName: clientName,
+    clientContract: id == projectId ? clientContract : null,
+    owner: owner,
+    assignees: assignees,
+  );
+
+  TaskLinks withOwner(Member? owner) => TaskLinks(
+    projectId: projectId,
+    projectName: projectName,
+    clientName: clientName,
+    clientContract: clientContract,
+    owner: owner,
+    assignees: assignees,
+  );
+
+  TaskLinks withAssignees(List<Member> assignees) => TaskLinks(
+    projectId: projectId,
+    projectName: projectName,
+    clientName: clientName,
+    clientContract: clientContract,
+    owner: owner,
+    assignees: assignees,
+  );
+}
+
 /// Tarefa do quadro Kanban.
 class Task {
-  const Task({
+  Task({
+    required String id,
+    required String code,
+    required String title,
+    required String summary,
+    required TaskStatus status,
+    required TaskPriority priority,
+    required String category,
+    String description = '',
+    List<String> requirements = const [],
+    String? payloadExample,
+    String? sprint,
+    String? projectId,
+    String? projectName,
+    String? clientName,
+    String? clientContract,
+    bool isPrivate = false,
+    Member? owner,
+    List<Member> assignees = const [],
+    DateTime? startDate,
+    DateTime? dueDate,
+    DateTime? completedAt,
+    double loggedHours = 0,
+    double estimatedHours = 0,
+    double? progress,
+    bool reviewed = false,
+    List<String> tags = const [],
+    List<Subtask> subtasks = const [],
+    List<Attachment> attachments = const [],
+    List<TaskComment> comments = const [],
+    int commentCount = 0,
+    DateTime? createdAt,
+  }) : this._(
+         id: id,
+         code: code,
+         title: title,
+         summary: summary,
+         status: status,
+         priority: priority,
+         category: category,
+         description: description,
+         requirements: requirements,
+         payloadExample: payloadExample,
+         sprint: sprint,
+         isPrivate: isPrivate,
+         progress: progress,
+         reviewed: reviewed,
+         tags: tags,
+         subtasks: subtasks,
+         attachments: attachments,
+         comments: comments,
+         commentCount: commentCount,
+         createdAt: createdAt,
+         schedule: TaskSchedule(
+           startDate: startDate,
+           dueDate: dueDate,
+           completedAt: completedAt,
+           estimatedHours: estimatedHours,
+           loggedHours: loggedHours,
+         ),
+         links: TaskLinks(
+           projectId: projectId,
+           projectName: projectName,
+           clientName: clientName,
+           clientContract: clientContract,
+           owner: owner,
+           assignees: assignees,
+         ),
+       );
+
+  /// Tarefa em branco para o formulário de cadastro: começa hoje, prazo em
+  /// uma semana e o usuário logado como responsável.
+  factory Task.draft({
+    required DateTime now,
+    Member? owner,
+    TaskStatus status = TaskStatus.pending,
+    String sprint = '',
+  }) {
+    final today = DateTime(now.year, now.month, now.day);
+    return Task(
+      id: '',
+      code: 'NOVA',
+      title: '',
+      summary: '',
+      status: status,
+      priority: TaskPriority.medium,
+      category: 'Geral',
+      sprint: sprint.isEmpty ? null : sprint,
+      owner: owner,
+      startDate: today,
+      dueDate: today.add(const Duration(days: 7)),
+      completedAt: status == TaskStatus.done ? now : null,
+      estimatedHours: 8,
+    );
+  }
+
+  const Task._({
     required this.id,
     required this.code,
     required this.title,
@@ -81,37 +304,31 @@ class Task {
     required this.status,
     required this.priority,
     required this.category,
-    this.description = '',
-    this.requirements = const [],
-    this.payloadExample,
-    this.sprint,
-    this.projectName,
-    this.clientName,
-    this.clientContract,
-    this.isPrivate = false,
-    this.owner,
-    this.assignees = const [],
-    this.startDate,
-    this.dueDate,
-    this.completedAt,
-    this.loggedHours = 0,
-    this.estimatedHours = 0,
-    this.progress,
-    this.reviewed = false,
-    this.tags = const [],
-    this.subtasks = const [],
-    this.attachments = const [],
-    this.comments = const [],
-    this.commentCount = 0,
+    required this.description,
+    required this.requirements,
+    required this.payloadExample,
+    required this.sprint,
+    required this.isPrivate,
+    required this.progress,
+    required this.reviewed,
+    required this.tags,
+    required this.subtasks,
+    required this.attachments,
+    required this.comments,
+    required this.commentCount,
+    required this.createdAt,
+    required this.schedule,
+    required this.links,
   });
 
+  /// Identificador no banco. Vazio enquanto a tarefa ainda não foi salva.
   final String id;
 
   /// Código legível (ex.: TK-1048).
   final String code;
   final String title;
 
-  /// Resumo curto exibido no card do quadro.
+  /// Resumo curto exibido no card quando não há descrição.
   final String summary;
   final TaskStatus status;
   final TaskPriority priority;
@@ -122,17 +339,7 @@ class Task {
   final List<String> requirements;
   final String? payloadExample;
   final String? sprint;
-  final String? projectName;
-  final String? clientName;
-  final String? clientContract;
   final bool isPrivate;
-  final Member? owner;
-  final List<Member> assignees;
-  final DateTime? startDate;
-  final DateTime? dueDate;
-  final DateTime? completedAt;
-  final double loggedHours;
-  final double estimatedHours;
 
   /// Progresso explícito (0..1) exibido no card, quando houver.
   final double? progress;
@@ -144,99 +351,103 @@ class Task {
 
   /// Total de comentários (pode ser maior que [comments] carregados).
   final int commentCount;
+  final DateTime? createdAt;
+  final TaskSchedule schedule;
+  final TaskLinks links;
+
+  bool get isSaved => id.isNotEmpty;
+
+  DateTime? get startDate => schedule.startDate;
+  DateTime? get dueDate => schedule.dueDate;
+  DateTime? get completedAt => schedule.completedAt;
+  double get estimatedHours => schedule.estimatedHours;
+  double get loggedHours => schedule.loggedHours;
+  double get hoursProgress => schedule.hoursProgress;
+
+  String? get projectId => links.projectId;
+  String? get projectName => links.projectName;
+  String? get clientName => links.clientName;
+  String? get clientContract => links.clientContract;
+  Member? get owner => links.owner;
+  List<Member> get assignees => links.assignees;
 
   int get completedSubtasks => subtasks.where((s) => s.done).length;
 
   double get subtaskProgress =>
       subtasks.isEmpty ? 0 : completedSubtasks / subtasks.length;
 
-  double get hoursProgress =>
-      estimatedHours == 0 ? 0 : (loggedHours / estimatedHours).clamp(0, 1);
+  /// Texto curto para o card: primeira linha da descrição ou o resumo.
+  String get excerpt {
+    final firstLine = description
+        .split('\n')
+        .map((line) => line.trim())
+        .firstWhere((line) => line.isNotEmpty, orElse: () => '');
+    return firstLine.isNotEmpty ? firstLine : summary;
+  }
 
-  /// Cópia com os campos editáveis alterados.
+  /// A tarefa está aberta e o prazo terminou antes de hoje.
+  bool isOverdue(DateTime now) {
+    final due = dueDate;
+    if (status == TaskStatus.done || due == null) return false;
+    return due.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  /// Cópia com os campos informados alterados.
   ///
-  /// Status e data de conclusão mudam juntos, por isso ficam em [withStatus].
+  /// Para mudar o status use [withStatus], que mantém a data de conclusão
+  /// coerente.
   Task copyWith({
     String? title,
-    String? summary,
-    TaskPriority? priority,
     String? description,
-    String? projectName,
-    String? clientName,
-    Member? owner,
-    DateTime? startDate,
-    DateTime? dueDate,
+    TaskStatus? status,
+    TaskPriority? priority,
+    String? category,
+    String? sprint,
+    TaskSchedule? schedule,
+    TaskLinks? links,
     List<String>? tags,
     List<Subtask>? subtasks,
+    List<Attachment>? attachments,
     List<TaskComment>? comments,
     int? commentCount,
   }) {
-    return Task(
+    return Task._(
       id: id,
       code: code,
       title: title ?? this.title,
-      summary: summary ?? this.summary,
-      status: status,
+      summary: summary,
+      status: status ?? this.status,
       priority: priority ?? this.priority,
-      category: category,
+      category: category ?? this.category,
       description: description ?? this.description,
       requirements: requirements,
       payloadExample: payloadExample,
-      sprint: sprint,
-      projectName: projectName ?? this.projectName,
-      clientName: clientName ?? this.clientName,
-      clientContract: clientContract,
+      sprint: sprint ?? this.sprint,
       isPrivate: isPrivate,
-      owner: owner ?? this.owner,
-      assignees: assignees,
-      startDate: startDate ?? this.startDate,
-      dueDate: dueDate ?? this.dueDate,
-      completedAt: completedAt,
-      loggedHours: loggedHours,
-      estimatedHours: estimatedHours,
       progress: progress,
       reviewed: reviewed,
       tags: tags ?? this.tags,
       subtasks: subtasks ?? this.subtasks,
-      attachments: attachments,
+      attachments: attachments ?? this.attachments,
       comments: comments ?? this.comments,
       commentCount: commentCount ?? this.commentCount,
+      createdAt: createdAt,
+      schedule: schedule ?? this.schedule,
+      links: links ?? this.links,
     );
   }
 
   /// Cópia com novo [status]. A data de conclusão passa a ser [now] quando a
   /// tarefa é concluída e é limpa quando ela sai de "Concluídas".
   Task withStatus(TaskStatus status, {required DateTime now}) {
-    return Task(
-      id: id,
-      code: code,
-      title: title,
-      summary: summary,
+    final completedAt = switch (status) {
+      TaskStatus.done when this.status == TaskStatus.done => this.completedAt,
+      TaskStatus.done => now,
+      _ => null,
+    };
+    return copyWith(
       status: status,
-      priority: priority,
-      category: category,
-      description: description,
-      requirements: requirements,
-      payloadExample: payloadExample,
-      sprint: sprint,
-      projectName: projectName,
-      clientName: clientName,
-      clientContract: clientContract,
-      isPrivate: isPrivate,
-      owner: owner,
-      assignees: assignees,
-      startDate: startDate,
-      dueDate: dueDate,
-      completedAt: status == TaskStatus.done ? now : null,
-      loggedHours: loggedHours,
-      estimatedHours: estimatedHours,
-      progress: progress,
-      reviewed: reviewed,
-      tags: tags,
-      subtasks: subtasks,
-      attachments: attachments,
-      comments: comments,
-      commentCount: commentCount,
+      schedule: schedule.withCompletion(completedAt),
     );
   }
 
@@ -247,7 +458,7 @@ class Task {
   );
 }
 
-/// Indicadores consolidados da sprint ativa (cards do topo do quadro).
+/// Indicadores consolidados do quadro (cards do topo).
 class SprintOverview {
   const SprintOverview({
     required this.sprintName,
@@ -255,7 +466,7 @@ class SprintOverview {
     required this.monthGrowth,
     required this.teamCapacity,
     required this.pending,
-    required this.blockers,
+    required this.overdue,
     required this.inProgress,
     required this.allocatedDevs,
     required this.done,
@@ -265,13 +476,21 @@ class SprintOverview {
 
   final String sprintName;
   final int totalTasks;
+
+  /// Variação de tarefas criadas neste mês em relação ao anterior.
   final double monthGrowth;
+
+  /// Horas estimadas em andamento sobre a capacidade semanal da equipe.
   final double teamCapacity;
   final int pending;
-  final int blockers;
+
+  /// Tarefas abertas com prazo vencido.
+  final int overdue;
   final int inProgress;
   final int allocatedDevs;
   final int done;
-  final double onTimeRate;
+
+  /// Concluídas dentro do prazo; `null` quando nenhuma tinha prazo.
+  final double? onTimeRate;
   final List<Member> onlineMembers;
 }

@@ -11,10 +11,20 @@ import '../../core/ui/pill.dart';
 
 /// Card de projeto com faixa colorida no topo.
 class ProjectCard extends StatelessWidget {
-  const ProjectCard({super.key, required this.project, required this.now});
+  const ProjectCard({
+    super.key,
+    required this.project,
+    required this.now,
+    required this.onEdit,
+    this.onDelete,
+  });
 
   final Project project;
   final DateTime now;
+  final VoidCallback onEdit;
+
+  /// Disponível apenas para administradores.
+  final VoidCallback? onDelete;
 
   Color get _accent => switch (project.status) {
     ProjectStatus.done => AppColors.success,
@@ -34,6 +44,7 @@ class ProjectCard extends StatelessWidget {
     ProjectKind.landing => Icons.web,
     ProjectKind.api => Icons.hub_outlined,
     ProjectKind.report => Icons.description_outlined,
+    ProjectKind.other => Icons.work_outline,
   };
 
   @override
@@ -90,7 +101,18 @@ class ProjectCard extends StatelessWidget {
       Flexible(child: _statusPill()),
       const Spacer(),
       if (_priorityPill() case final pill?) Flexible(child: pill),
-      const Icon(Icons.more_vert, size: 18),
+      _menu(),
+    ],
+  );
+
+  Widget _menu() => PopupMenuButton<VoidCallback>(
+    tooltip: 'Ações do projeto',
+    iconSize: 18,
+    onSelected: (action) => action(),
+    itemBuilder: (context) => [
+      PopupMenuItem(value: onEdit, child: const Text('Editar')),
+      if (onDelete case final delete?)
+        PopupMenuItem(value: delete, child: const Text('Excluir')),
     ],
   );
 
@@ -119,7 +141,13 @@ class ProjectCard extends StatelessWidget {
               children: [
                 const Icon(Icons.business, size: 12),
                 const SizedBox(width: 4),
-                Text(project.clientName, style: const TextStyle(fontSize: 11)),
+                Expanded(
+                  child: Text(
+                    project.clientName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
               ],
             ),
           ],

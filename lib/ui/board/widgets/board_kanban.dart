@@ -13,10 +13,14 @@ class BoardKanban extends StatelessWidget {
     super.key,
     required this.viewModel,
     required this.onOpenTask,
+    required this.onCreateTask,
   });
 
   final BoardViewModel viewModel;
   final ValueChanged<Task> onOpenTask;
+
+  /// Cria uma tarefa já com o status da coluna.
+  final ValueChanged<TaskStatus> onCreateTask;
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +30,11 @@ class BoardKanban extends StatelessWidget {
           for (final status in TaskStatus.values)
             _KanbanColumn(
               status: status,
-              count: viewModel.columnCount(status),
               tasks: viewModel.tasksFor(status),
               now: viewModel.now,
               onOpenTask: onOpenTask,
               onDrop: (task) => viewModel.moveTask.execute((task, status)),
+              onCreate: () => onCreateTask(status),
             ),
         ];
 
@@ -74,19 +78,19 @@ Color statusColor(TaskStatus status) => switch (status) {
 class _KanbanColumn extends StatelessWidget {
   const _KanbanColumn({
     required this.status,
-    required this.count,
     required this.tasks,
     required this.now,
     required this.onOpenTask,
     required this.onDrop,
+    required this.onCreate,
   });
 
   final TaskStatus status;
-  final int count;
   final List<Task> tasks;
   final DateTime now;
   final ValueChanged<Task> onOpenTask;
   final ValueChanged<Task> onDrop;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +112,11 @@ class _KanbanColumn extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _ColumnHeader(status: status, count: count),
+              _ColumnHeader(
+                status: status,
+                count: tasks.length,
+                onCreate: onCreate,
+              ),
               const SizedBox(height: 12),
               if (tasks.isEmpty)
                 const Padding(
@@ -138,10 +146,15 @@ class _KanbanColumn extends StatelessWidget {
 
 /// Título da coluna com bolinha de status e contador.
 class _ColumnHeader extends StatelessWidget {
-  const _ColumnHeader({required this.status, required this.count});
+  const _ColumnHeader({
+    required this.status,
+    required this.count,
+    required this.onCreate,
+  });
 
   final TaskStatus status;
   final int count;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +182,12 @@ class _ColumnHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        const Icon(Icons.add, size: 20, color: AppColors.textSecondary),
+        IconButton(
+          tooltip: 'Nova tarefa nesta coluna',
+          visualDensity: VisualDensity.compact,
+          onPressed: onCreate,
+          icon: const Icon(Icons.add, size: 20, color: AppColors.textSecondary),
+        ),
       ],
     );
   }

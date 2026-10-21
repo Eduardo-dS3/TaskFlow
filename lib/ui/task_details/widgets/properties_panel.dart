@@ -1,42 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/models/task.dart';
+import '../../../domain/models/member.dart';
 import '../../core/localization/formatters.dart';
 import '../../core/themes/colors.dart';
 import '../../core/ui/avatar.dart';
+import '../../core/ui/member_picker_dialog.dart';
 import '../../core/ui/meter.dart';
 import '../../core/ui/pill.dart';
 import '../../core/ui/surface_card.dart';
 import '../view_models/task_details_viewmodel.dart';
+import 'hours_dialog.dart';
 
-/// Painel "Propriedades": projeto, cliente, responsável, datas, horas e tags.
-class PropertiesPanel extends StatefulWidget {
+/// Painel "Propriedades": projeto, pessoas, planejamento, horas e tags.
+class PropertiesPanel extends StatelessWidget {
   const PropertiesPanel({super.key, required this.viewModel});
 
   final TaskDetailsViewModel viewModel;
 
   @override
-  State<PropertiesPanel> createState() => _PropertiesPanelState();
-}
-
-class _PropertiesPanelState extends State<PropertiesPanel> {
-  Future<void> _pickDate(
-    DateTime? initial,
-    ValueChanged<DateTime> onPicked,
-  ) async {
-    final now = widget.viewModel.now;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial ?? now,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 3),
-    );
-    if (picked != null) onPicked(picked);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final vm = widget.viewModel;
+    final vm = viewModel;
     return ListenableBuilder(
       listenable: vm,
       builder: (context, _) {
@@ -62,13 +45,13 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
               const SizedBox(height: 16),
               _OwnerField(viewModel: vm),
               const SizedBox(height: 16),
-              _DatesRow(
-                task: task,
-                onPickStart: () => _pickDate(task.startDate, vm.setStartDate),
-                onPickDue: () => _pickDate(task.dueDate, vm.setDueDate),
-              ),
+              _AssigneesField(viewModel: vm),
               const SizedBox(height: 16),
-              _HoursCard(task: task),
+              _PlanningFields(viewModel: vm),
+              const SizedBox(height: 16),
+              _DatesRow(viewModel: vm),
+              const SizedBox(height: 16),
+              _HoursCard(viewModel: vm),
               const SizedBox(height: 16),
               _TagsSection(viewModel: vm),
             ],
@@ -86,26 +69,26 @@ class _ProjectField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final projectId = viewModel.task!.projectId;
+    final known = viewModel.projects.any((p) => p.id == projectId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _Label(icon: Icons.folder_outlined, text: 'Projeto Associado'),
-        DropdownButtonFormField<String>(
-          initialValue: viewModel.task!.projectName,
+        DropdownButtonFormField<String?>(
+          initialValue: known ? projectId : null,
           isExpanded: true,
-          hint: const Text('Selecione um projeto'),
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
           ),
           items: [
-            for (final name in viewModel.projectNames)
-              DropdownMenuItem(value: name, child: Text(name)),
+            const DropdownMenuItem<String?>(child: Text('Sem projeto')),
+            for (final project in viewModel.projects)
+              DropdownMenuItem(value: project.id, child: Text(project.name)),
           ],
-          onChanged: (value) {
-            if (value != null) viewModel.setProject(value);
-          },
+          onChanged: viewModel.setProject,
         ),
       ],
     );
@@ -117,14 +100,6 @@ class _ClientField extends StatelessWidget {
 
   final String client;
   final String? contract;
-
-  String get _initials {
-    final parts = client.split(' ');
-    final initials = parts.length > 1
-        ? parts[0][0] + parts[1][0]
-        : client.substring(0, 2);
-    return initials.toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +117,7 @@ class _ClientField extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              _initials,
+              initialsOf(client),
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
@@ -174,15 +149,14 @@ class _OwnerField extends StatelessWidget {
           leading: InitialsAvatar(initials: owner?.initials ?? '?', size: 34),
           title: owner?.name ?? 'Sem responsável',
           subtitle: owner?.role,
-          trailing: PopupMenuButton<void>(
+          trailing: PopupMenuButton<Member?>(
             tooltip: 'Trocar responsável',
             icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
+            onSelected: viewModel.setOwner,
             itemBuilder: (context) => [
+              const PopupMenuItem<Member?>(child: Text('Sem responsável')),
               for (final member in viewModel.members)
-                PopupMenuItem<void>(
-                  onTap: () => viewModel.setOwner(member),
-                  child: Text(member.name),
-                ),
+                PopupMenuItem<Member?>(value: member, child: Text(member.name)),
             ],
           ),
         ),
@@ -191,19 +165,140 @@ class _OwnerField extends StatelessWidget {
   }
 }
 
-class _DatesRow extends StatelessWidget {
-  const _DatesRow({
-    required this.task,
-    required this.onPickStart,
-    required this.onPickDue,
-  });
+class _AssigneesField extends StatelessWidget {
+  const _AssigneesField({required this.viewModel});
 
-  final Task task;
-  final VoidCallback onPickStart;
-  final VoidCallback onPickDue;
+  final TaskDetailsViewModel viewModel;
+
+  Future<void> _edit(BuildContext context) async {
+    final selected = await showMemberPicker(
+      context,
+      title: 'Participantes da tarefa',
+      members: viewModel.members,
+      selected: viewModel.task!.assignees,
+    );
+    if (selected != null) viewModel.setAssignees(selected);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final assignees = viewModel.task!.assignees;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: _Label(icon: Icons.group_outlined, text: 'Participantes'),
+            ),
+            TextButton(
+              onPressed: () => _edit(context),
+              child: const Text('Editar', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        if (assignees.isEmpty)
+          const Text(
+            'Nenhum participante além do responsável.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final member in assignees)
+                Chip(
+                  avatar: InitialsAvatar(initials: member.initials, size: 22),
+                  label: Text(
+                    member.name,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// Categoria (frente de trabalho) e sprint.
+class _PlanningFields extends StatefulWidget {
+  const _PlanningFields({required this.viewModel});
+
+  final TaskDetailsViewModel viewModel;
+
+  @override
+  State<_PlanningFields> createState() => _PlanningFieldsState();
+}
+
+class _PlanningFieldsState extends State<_PlanningFields> {
+  late final _category = TextEditingController(
+    text: widget.viewModel.task!.category,
+  );
+  late final _sprint = TextEditingController(
+    text: widget.viewModel.task!.sprint ?? '',
+  );
+
+  @override
+  void dispose() {
+    _category.dispose();
+    _sprint.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _category,
+            onChanged: widget.viewModel.setCategory,
+            decoration: const InputDecoration(
+              labelText: 'Categoria',
+              hintText: 'Ex.: Backend',
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: _sprint,
+            onChanged: widget.viewModel.setSprint,
+            decoration: const InputDecoration(labelText: 'Sprint'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DatesRow extends StatelessWidget {
+  const _DatesRow({required this.viewModel});
+
+  final TaskDetailsViewModel viewModel;
+
+  Future<void> _pick(
+    BuildContext context,
+    DateTime? initial,
+    ValueChanged<DateTime> onPicked,
+  ) async {
+    final now = viewModel.now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? now,
+      firstDate: DateTime(now.year - 2),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) onPicked(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final task = viewModel.task!;
+    final setDates = viewModel.setDates;
     return Row(
       children: [
         Expanded(
@@ -211,7 +306,12 @@ class _DatesRow extends StatelessWidget {
             label: 'Início',
             icon: Icons.calendar_today_outlined,
             date: task.startDate,
-            onTap: onPickStart,
+            onTap: () => _pick(
+              context,
+              task.startDate,
+              (d) => setDates(start: d, due: task.dueDate),
+            ),
+            onClear: () => setDates(start: null, due: task.dueDate),
           ),
         ),
         const SizedBox(width: 8),
@@ -221,7 +321,12 @@ class _DatesRow extends StatelessWidget {
             icon: Icons.flag_outlined,
             date: task.dueDate,
             danger: true,
-            onTap: onPickDue,
+            onTap: () => _pick(
+              context,
+              task.dueDate,
+              (d) => setDates(start: task.startDate, due: d),
+            ),
+            onClear: () => setDates(start: task.startDate, due: null),
           ),
         ),
       ],
@@ -229,71 +334,94 @@ class _DatesRow extends StatelessWidget {
   }
 }
 
-/// Horas registradas vs. estimadas.
+/// Horas registradas vs. estimadas, com edição.
 class _HoursCard extends StatelessWidget {
-  const _HoursCard({required this.task});
+  const _HoursCard({required this.viewModel});
 
-  final Task task;
+  final TaskDetailsViewModel viewModel;
+
+  Future<void> _edit(BuildContext context) async {
+    final task = viewModel.task!;
+    final hours = await showHoursDialog(
+      context,
+      estimated: task.estimatedHours,
+      logged: task.loggedHours,
+    );
+    if (hours != null) {
+      viewModel.setHours(estimated: hours.estimated, logged: hours.logged);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final task = viewModel.task!;
     final remaining = task.estimatedHours - task.loggedHours;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+    return Material(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
         borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Row(
+        onTap: () => _edit(context),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
             children: [
-              const Icon(Icons.timer_outlined, size: 16),
-              const SizedBox(width: 6),
-              const Expanded(
-                child: Text(
-                  'Horas Registradas',
-                  style: TextStyle(fontSize: 12),
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.timer_outlined, size: 16),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Horas Registradas',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  Text(
+                    '${Formatters.hours(task.loggedHours)} / '
+                    '${Formatters.hours(task.estimatedHours)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit_outlined, size: 14),
+                ],
               ),
-              Text(
-                '${Formatters.hours(task.loggedHours)} / '
-                '${Formatters.hours(task.estimatedHours)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+              const SizedBox(height: 8),
+              Meter(
+                value: task.hoursProgress,
+                height: 8,
+                background: AppColors.border,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    '${Formatters.percent(task.hoursProgress)} consumido',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    remaining >= 0
+                        ? '${Formatters.hours(remaining)} restantes'
+                        : '${Formatters.hours(-remaining)} acima da estimativa',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: remaining >= 0
+                          ? AppColors.success
+                          : AppColors.danger,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Meter(
-            value: task.hoursProgress,
-            height: 8,
-            background: AppColors.border,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                '${Formatters.percent(task.hoursProgress)} consumido',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${Formatters.hours(remaining < 0 ? 0 : remaining)} restantes',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.success,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -329,17 +457,7 @@ class _TagsSectionState extends State<_TagsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            const Expanded(
-              child: _Label(icon: Icons.label_outline, text: 'Etiquetas'),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: const Text('+ Gerenciar', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
+        const _Label(icon: Icons.label_outline, text: 'Etiquetas'),
         Wrap(
           spacing: 6,
           runSpacing: 6,
@@ -356,6 +474,7 @@ class _TagsSectionState extends State<_TagsSection> {
             hintText: 'Adicionar nova tag...',
             fillColor: AppColors.surfaceMuted,
             suffixIcon: IconButton(
+              tooltip: 'Adicionar',
               icon: const Icon(Icons.add, color: AppColors.primary),
               onPressed: _addTag,
             ),
@@ -448,9 +567,9 @@ class _InfoTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (subtitle != null)
+                if (subtitle case final text? when text.isNotEmpty)
                   Text(
-                    subtitle!,
+                    text,
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,
@@ -472,6 +591,7 @@ class _DateField extends StatelessWidget {
     required this.icon,
     required this.date,
     required this.onTap,
+    required this.onClear,
     this.danger = false,
   });
 
@@ -479,11 +599,13 @@ class _DateField extends StatelessWidget {
   final IconData icon;
   final DateTime? date;
   final VoidCallback onTap;
+  final VoidCallback onClear;
   final bool danger;
 
   @override
   Widget build(BuildContext context) {
     final color = danger ? AppColors.danger : AppColors.textSecondary;
+    final value = date;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -501,16 +623,30 @@ class _DateField extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(6),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              child: Text(
-                date == null ? '—' : Formatters.fullDate(date!),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: danger ? AppColors.danger : AppColors.textPrimary,
-                ),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      value == null ? 'Definir' : Formatters.fullDate(value),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: danger
+                            ? AppColors.danger
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Remover data',
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 16,
+                    onPressed: value == null ? null : onClear,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
             ),
           ),

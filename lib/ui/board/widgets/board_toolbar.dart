@@ -12,63 +12,31 @@ class BoardToolbar extends StatelessWidget {
     super.key,
     required this.viewModel,
     required this.onCreateTask,
+    required this.onExport,
   });
 
   final BoardViewModel viewModel;
   final VoidCallback onCreateTask;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
+    final sprint = viewModel.overview?.sprintName ?? '';
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        SegmentedButton<BoardViewMode>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(
-              value: BoardViewMode.kanban,
-              icon: Icon(Icons.view_kanban_outlined, size: 18),
-              label: Text('Kanban'),
-            ),
-            ButtonSegment(
-              value: BoardViewMode.list,
-              icon: Icon(Icons.table_rows_outlined, size: 18),
-              label: Text('Lista / Tabela'),
-            ),
-          ],
-          selected: {viewModel.viewMode},
-          onSelectionChanged: (s) => viewModel.setViewMode(s.first),
-        ),
-        if (viewModel.overview case final overview?)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'SPRINT ATIVA:',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Pill(
-                label: overview.sprintName,
-                foreground: AppColors.primaryDark,
-                background: AppColors.primarySoft,
-                fontSize: 12,
-              ),
-            ],
-          ),
+        _ViewModeToggle(viewModel: viewModel),
+        if (sprint.isNotEmpty) _SprintLabel(sprint: sprint),
         SizedBox(
           width: 200,
-          child: TextField(
+          child: TextFormField(
+            initialValue: viewModel.query,
             onChanged: viewModel.setQuery,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.filter_alt_outlined, size: 18),
-              hintText: 'Filtrar por nome...',
+              hintText: 'Filtrar tarefas...',
             ),
           ),
         ),
@@ -92,10 +60,79 @@ class BoardToolbar extends StatelessWidget {
           ],
           onSelected: viewModel.setPriorityFilter,
         ),
+        IconButton(
+          tooltip: 'Atualizar',
+          onPressed: viewModel.load.execute,
+          icon: const Icon(Icons.refresh),
+        ),
+        OutlinedButton.icon(
+          onPressed: onExport,
+          icon: const Icon(Icons.download_outlined, size: 18),
+          label: const Text('Exportar CSV'),
+        ),
         FilledButton.icon(
           onPressed: onCreateTask,
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Criar Tarefa'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ViewModeToggle extends StatelessWidget {
+  const _ViewModeToggle({required this.viewModel});
+
+  final BoardViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<BoardViewMode>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(
+          value: BoardViewMode.kanban,
+          icon: Icon(Icons.view_kanban_outlined, size: 18),
+          label: Text('Kanban'),
+        ),
+        ButtonSegment(
+          value: BoardViewMode.list,
+          icon: Icon(Icons.table_rows_outlined, size: 18),
+          label: Text('Lista / Tabela'),
+        ),
+      ],
+      selected: {viewModel.viewMode},
+      onSelectionChanged: (s) => viewModel.setViewMode(s.first),
+    );
+  }
+}
+
+class _SprintLabel extends StatelessWidget {
+  const _SprintLabel({required this.sprint});
+
+  final String sprint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'SPRINT ATIVA:',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Pill(
+            label: sprint,
+            foreground: AppColors.primaryDark,
+            background: AppColors.primarySoft,
+            fontSize: 12,
+          ),
         ),
       ],
     );

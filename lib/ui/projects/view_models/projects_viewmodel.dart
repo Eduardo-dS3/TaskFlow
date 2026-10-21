@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/project/project_repository.dart';
+import '../../../data/repositories/user/user_repository.dart';
+import '../../../domain/models/member.dart';
 import '../../../domain/models/project.dart';
+import '../../../domain/use_cases/load_portfolio_use_case.dart';
 import '../../../utils/command.dart';
 import '../../../utils/result.dart';
 
@@ -9,44 +12,65 @@ enum ProjectsLayout { grid, list }
 
 class ProjectsViewModel extends ChangeNotifier {
   ProjectsViewModel({
+    required this._loadPortfolio,
     required this._projectRepository,
+    required this._userRepository,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now {
     load = Command0(_load)..execute();
+    saveProject = Command1(_saveProject);
+    deleteProject = Command1(_deleteProject);
+    saveClient = Command1(_saveClient);
+    deleteClient = Command1(_deleteClient);
   }
 
+  final LoadPortfolioUseCase _loadPortfolio;
   final ProjectRepository _projectRepository;
+  final UserRepository _userRepository;
   final DateTime Function() _clock;
 
   late final Command0<void> load;
+  late final Command1<void, Project> saveProject;
+  late final Command1<void, String> deleteProject;
+  late final Command1<void, Client> saveClient;
+  late final Command1<void, String> deleteClient;
 
   DateTime get now => _clock();
 
-  PortfolioSummary? _summary;
-  PortfolioSummary? get summary => _summary;
+  PortfolioData? _data;
 
-  List<Project> _projects = [];
-  List<Client> _clients = [];
-  List<Client> get clients => _clients;
+  PortfolioSummary? get summary => _data?.summary;
 
-  List<MemberAllocation> _allocations = [];
-  List<MemberAllocation> get allocations => _allocations;
+  List<Client> get clients => _data?.clients ?? const [];
+
+  List<MemberAllocation> get allocations => _data?.allocations ?? const [];
+
+  /// Pessoas ativas que podem compor a equipe de um projeto.
+  List<Member> get members =>
+      (_data?.members ?? const <Member>[]).where((m) => m.active).toList();
+
+  Member? _currentUser;
+
+  /// Apenas administradores excluem projetos e clientes.
+  bool get isAdmin => _currentUser?.isAdmin ?? false;
+
+  List<Project> get _projects => _data?.projects ?? const [];
 
   /// Frentes de trabalho presentes na alocação (legenda do gráfico).
   List<String> get fronts =>
-      {for (final a in _allocations) ...a.hoursByFront.keys}.toList();
+      {for (final a in allocations) ...a.hoursByFront.keys}.toList();
 
   double get totalOccupancy {
-    if (_allocations.isEmpty) return 0;
-    final allocated = _allocations.fold<double>(
+    if (allocations.isEmpty) return 0;
+    final allocated = allocations.fold<double>(
       0,
       (sum, a) => sum + a.allocatedHours,
     );
-    final capacity = _allocations.fold<double>(
+    final capacity = allocations.fold<double>(
       0,
       (sum, a) => sum + a.capacityHours,
     );
-    return allocated / capacity;
+    return capacity == 0 ? 0 : allocated / capacity;
   }
 
   /// `null` representa "Todos os Projetos".
@@ -55,6 +79,9 @@ class ProjectsViewModel extends ChangeNotifier {
 
   String? _clientFilter;
   String? get clientFilter => _clientFilter;
+
+  Member? _memberFilter;
+  Member? get memberFilter => _memberFilter;
 
   String _query = '';
 
@@ -72,10 +99,11 @@ class ProjectsViewModel extends ChangeNotifier {
   List<Project> get projects {
     final q = _query.trim().toLowerCase();
     return _projects.where((p) {
-      if (_statusFilter != null && p.status != _statusFilter) return false;
-      if (_clientFilter != null && p.clientName != _clientFilter) return false;
-      if (q.isNotEmpty && !p.name.toLowerCase().contains(q)) return false;
-      return true;
+      final member = _memberFilter;
+      return (_statusFilter == null || p.status == _statusFilter) &&
+          (_clientFilter == null || p.clientName == _clientFilter) &&
+          (member == null || p.team.contains(member)) &&
+          (q.isEmpty || p.name.toLowerCase().contains(q));
     }).toList();
   }
 
@@ -86,6 +114,11 @@ class ProjectsViewModel extends ChangeNotifier {
 
   void setClientFilter(String? client) {
     _clientFilter = client;
+    notifyListeners();
+  }
+
+  void setMemberFilter(Member? member) {
+    _memberFilter = member;
     notifyListeners();
   }
 
@@ -100,29 +133,31 @@ class ProjectsViewModel extends ChangeNotifier {
   }
 
   Future<Result<void>> _load() async {
-    final results = await (
-      _projectRepository.getPortfolioSummary(),
-      _projectRepository.getProjects(),
-      _projectRepository.getClients(),
-      _projectRepository.getAllocations(),
-    ).wait;
-
-    switch (results) {
-      case (
-        Ok(value: final summary),
-        Ok(value: final projects),
-        Ok(value: final clients),
-        Ok(value: final allocations),
-      ):
-        _summary = summary;
-        _projects = projects;
-        _clients = clients;
-        _allocations = allocations;
-        notifyListeners();
-        return const Result.ok(null);
-      default:
-        notifyListeners();
-        return Result.error(Exception('Falha ao carregar o portfólio'));
+    if (await _userRepository.getCurrentUser() case Ok(:final value)) {
+      _currentUser = value;
     }
+    final result = await _loadPortfolio.load();
+    if (result case Ok(:final value)) _data = value;
+    notifyListeners();
+    return result;
   }
+
+  /// Executa uma alteração e, se der certo, recarrega os indicadores.
+  Future<Result<void>> _mutate(Future<Result<Object?>> action) async {
+    final result = await action;
+    if (result case Error(:final error)) return Result.error(error);
+    return _load();
+  }
+
+  Future<Result<void>> _saveProject(Project project) =>
+      _mutate(_projectRepository.saveProject(project));
+
+  Future<Result<void>> _deleteProject(String id) =>
+      _mutate(_projectRepository.deleteProject(id));
+
+  Future<Result<void>> _saveClient(Client client) =>
+      _mutate(_projectRepository.saveClient(client));
+
+  Future<Result<void>> _deleteClient(String id) =>
+      _mutate(_projectRepository.deleteClient(id));
 }

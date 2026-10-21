@@ -62,7 +62,9 @@ class BoardList extends StatelessWidget {
                   PriorityPill(priority: tasks[i].priority),
                   const SizedBox(width: 12),
                   AvatarStack(
-                    initials: [for (final m in tasks[i].assignees) m.initials],
+                    initials: [
+                      for (final m in tasks[i].links.people) m.initials,
+                    ],
                   ),
                 ],
               ),

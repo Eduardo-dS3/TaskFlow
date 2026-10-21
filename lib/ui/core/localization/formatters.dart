@@ -101,6 +101,16 @@ abstract final class Formatters {
     ProjectStatus.paused => 'Pausado',
   };
 
+  static String projectKind(ProjectKind kind) => switch (kind) {
+    ProjectKind.mobile => 'Aplicativo mobile',
+    ProjectKind.web => 'Plataforma web',
+    ProjectKind.fiscal => 'Fiscal / financeiro',
+    ProjectKind.landing => 'Site / landing page',
+    ProjectKind.api => 'API / backend',
+    ProjectKind.report => 'Relatórios / BI',
+    ProjectKind.other => 'Outro',
+  };
+
   static String clientTier(ClientTier tier) => switch (tier) {
     ClientTier.enterprise => 'Enterprise',
     ClientTier.pro => 'Pro',
@@ -112,8 +122,11 @@ abstract final class Formatters {
     ReportPeriod.last30Days => 'Últimos 30 dias',
     ReportPeriod.quarter => 'Este trimestre',
     ReportPeriod.year => 'Ano atual',
-    ReportPeriod.custom => 'Personalizado',
   };
+
+  /// Percentual opcional: "—" quando não há dados para calcular.
+  static String optionalPercent(double? value, {int decimals = 0}) =>
+      value == null ? '—' : percent(value, decimals: decimals);
 
   static String workload(WorkloadLevel level) => switch (level) {
     WorkloadLevel.stable => 'Estável',

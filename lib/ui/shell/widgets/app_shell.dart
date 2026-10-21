@@ -5,6 +5,7 @@ import '../../../routing/routes.dart';
 import '../../core/themes/colors.dart';
 import '../../core/themes/dimens.dart';
 import '../view_models/shell_viewmodel.dart';
+import 'help_dialog.dart';
 import 'sidebar.dart';
 import 'top_bar.dart';
 
@@ -26,13 +27,18 @@ class AppShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= Dimens.breakpointSidebar;
-        final sidebar = Sidebar(
-          location: location,
-          synced: viewModel.synced,
-          onNavigate: (route) {
-            if (!wide) Navigator.of(context).maybePop();
-            context.go(route);
-          },
+        void navigate(String route) {
+          if (!wide) Navigator.of(context).maybePop();
+          context.go(route);
+        }
+
+        final sidebar = ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, _) => Sidebar(
+            location: location,
+            onNavigate: navigate,
+            onHelp: () => showHelpDialog(context),
+          ),
         );
 
         return Scaffold(
@@ -52,6 +58,10 @@ class AppShell extends StatelessWidget {
                       viewModel: viewModel,
                       showMenuButton: !wide,
                       onNewTask: () => context.go(Routes.newTask),
+                      onSearch: (query) =>
+                          context.go(Routes.boardSearch(query)),
+                      onOpenTask: (task) =>
+                          context.go(Routes.taskWithId(task.id)),
                     ),
                     Expanded(child: child),
                   ],

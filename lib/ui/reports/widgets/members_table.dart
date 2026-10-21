@@ -11,9 +11,14 @@ import '../view_models/reports_viewmodel.dart';
 
 /// "Performance por Membro da Equipe & Alocação".
 class MembersTable extends StatelessWidget {
-  const MembersTable({super.key, required this.viewModel});
+  const MembersTable({
+    super.key,
+    required this.viewModel,
+    required this.onExportCsv,
+  });
 
   final ReportsViewModel viewModel;
+  final VoidCallback onExportCsv;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +27,10 @@ class MembersTable extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(padding: EdgeInsets.all(20), child: _TableHeader()),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: _TableHeader(onExportCsv: onExportCsv),
+          ),
           _PerformanceTable(members: viewModel.visibleMembers),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -35,29 +43,21 @@ class MembersTable extends StatelessWidget {
 }
 
 class _TableHeader extends StatelessWidget {
-  const _TableHeader();
+  const _TableHeader({required this.onExportCsv});
+
+  final VoidCallback onExportCsv;
 
   @override
   Widget build(BuildContext context) {
     return SectionTitle(
-      title: 'Performance por Membro da Equipe & Alocação',
+      title: 'Desempenho por Pessoa',
       subtitle:
-          'Indicadores individuais de SLA, vazão e balanço de '
-          'carga de trabalho',
-      trailing: Wrap(
-        spacing: 8,
-        children: [
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.filter_list, size: 18),
-            label: const Text('Filtrar'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.download_outlined, size: 18),
-            label: const Text('CSV'),
-          ),
-        ],
+          'Tarefas, entregas no prazo e carga de trabalho de cada pessoa '
+          'ativa da equipe',
+      trailing: OutlinedButton.icon(
+        onPressed: onExportCsv,
+        icon: const Icon(Icons.download_outlined, size: 18),
+        label: const Text('CSV'),
       ),
     );
   }
@@ -259,18 +259,23 @@ class _MemberCell extends StatelessWidget {
 class _EfficiencyCell extends StatelessWidget {
   const _EfficiencyCell({required this.efficiency});
 
-  final double efficiency;
+  /// `null` quando a pessoa não concluiu tarefas com prazo no período.
+  final double? efficiency;
 
   /// Verde a partir de 94%, azul a partir de 85% e vermelho abaixo disso.
-  Color get _color {
-    if (efficiency >= 0.94) return AppColors.success;
-    if (efficiency >= 0.85) return AppColors.info;
+  static Color _colorFor(double value) {
+    if (value >= 0.94) return AppColors.success;
+    if (value >= 0.85) return AppColors.info;
     return AppColors.danger;
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _color;
+    final efficiency = this.efficiency;
+    if (efficiency == null) {
+      return const Text('—', style: TextStyle(color: AppColors.textSecondary));
+    }
+    final color = _colorFor(efficiency);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

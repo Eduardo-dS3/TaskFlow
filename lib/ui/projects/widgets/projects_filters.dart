@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../domain/models/member.dart';
 import '../../../domain/models/project.dart';
 import '../../core/themes/colors.dart';
 import '../../core/ui/surface_card.dart';
@@ -82,7 +83,7 @@ class _FilterFields extends StatelessWidget {
   final ProjectsViewModel viewModel;
 
   static int _columnsFor(double width) {
-    if (width > 800) return 4;
+    if (width > 800) return 3;
     if (width > 500) return 2;
     return 1;
   }
@@ -114,17 +115,7 @@ class _FilterFields extends StatelessWidget {
             ),
             SizedBox(
               width: width,
-              child: const _StaticSelect(
-                icon: Icons.badge_outlined,
-                label: 'Responsável Geral',
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: const _StaticSelect(
-                icon: Icons.calendar_month_outlined,
-                label: 'Período: Q4',
-              ),
+              child: _MemberSelect(viewModel: viewModel),
             ),
           ],
         );
@@ -249,21 +240,28 @@ class _LayoutToggle extends StatelessWidget {
   }
 }
 
-class _StaticSelect extends StatelessWidget {
-  const _StaticSelect({required this.icon, required this.label});
+class _MemberSelect extends StatelessWidget {
+  const _MemberSelect({required this.viewModel});
 
-  final IconData icon;
-  final String label;
+  final ProjectsViewModel viewModel;
 
   @override
   Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, size: 18),
-        suffixIcon: const Icon(Icons.keyboard_arrow_down),
+    final members = viewModel.members;
+    final current = viewModel.memberFilter;
+    return DropdownButtonFormField<Member?>(
+      initialValue: members.contains(current) ? current : null,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        prefixIcon: Icon(Icons.badge_outlined, size: 18),
         fillColor: AppColors.surfaceMuted,
       ),
-      child: Text(label, style: const TextStyle(fontSize: 14)),
+      items: [
+        const DropdownMenuItem<Member?>(child: Text('Toda a equipe')),
+        for (final member in members)
+          DropdownMenuItem(value: member, child: Text(member.name)),
+      ],
+      onChanged: viewModel.setMemberFilter,
     );
   }
 }

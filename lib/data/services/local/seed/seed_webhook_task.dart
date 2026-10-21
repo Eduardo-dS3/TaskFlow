@@ -16,6 +16,7 @@ Task seedWebhookTask(SeedCalendar calendar) => Task(
   category: 'Financeiro',
   isPrivate: true,
   sprint: 'Sprint 42 (Q4 FinTech)',
+  projectId: 'p-3',
   projectName: 'Fintech Core v2',
   clientName: 'Banco Alfa & Parceiros',
   clientContract: 'Contrato Enterprise #490',
@@ -32,7 +33,8 @@ Task seedWebhookTask(SeedCalendar calendar) => Task(
   subtasks: _subtasks,
   attachments: _attachments(calendar),
   comments: _comments(calendar),
-  commentCount: 3,
+  commentCount: 2,
+  createdAt: calendar.days(-3),
 );
 
 const _owner = Member(

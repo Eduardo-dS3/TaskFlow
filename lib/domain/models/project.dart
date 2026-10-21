@@ -4,7 +4,7 @@ import 'task.dart';
 enum ProjectStatus { inProgress, done, paused }
 
 /// Tipo do projeto, usado para escolher o ícone na UI.
-enum ProjectKind { mobile, web, fiscal, landing, api, report }
+enum ProjectKind { mobile, web, fiscal, landing, api, report, other }
 
 class Project {
   const Project({
@@ -14,19 +14,25 @@ class Project {
     required this.description,
     required this.status,
     required this.kind,
-    required this.totalTasks,
-    required this.completedTasks,
-    required this.team,
+    this.clientId,
+    this.totalTasks = 0,
+    this.completedTasks = 0,
+    this.team = const [],
     this.priority,
     this.badge,
     this.note,
     this.dueDate,
     this.finishedAt,
-    this.blocked = false,
+    this.createdAt,
   });
 
+  /// Nome exibido quando o projeto não tem cliente vinculado.
+  static const internalClientName = 'Interno';
+
+  /// Identificador no banco. Vazio enquanto o projeto não foi salvo.
   final String id;
   final String name;
+  final String? clientId;
   final String clientName;
   final String description;
   final ProjectStatus status;
@@ -43,11 +49,35 @@ class Project {
   final String? note;
   final DateTime? dueDate;
   final DateTime? finishedAt;
-  final bool blocked;
+  final DateTime? createdAt;
+
+  /// Projetos pausados ficam bloqueados até serem retomados.
+  bool get blocked => status == ProjectStatus.paused;
 
   int get remainingTasks => totalTasks - completedTasks;
 
   double get progress => totalTasks == 0 ? 0 : completedTasks / totalTasks;
+
+  /// Cópia com os totais de tarefas calculados a partir do quadro.
+  Project withTaskCounts({required int total, required int completed}) =>
+      Project(
+        id: id,
+        name: name,
+        clientId: clientId,
+        clientName: clientName,
+        description: description,
+        status: status,
+        kind: kind,
+        totalTasks: total,
+        completedTasks: completed,
+        team: team,
+        priority: priority,
+        badge: badge,
+        note: note,
+        dueDate: dueDate,
+        finishedAt: finishedAt,
+        createdAt: createdAt,
+      );
 }
 
 enum ClientTier { enterprise, pro, custom, maintenance }
@@ -56,18 +86,45 @@ class Client {
   const Client({
     required this.id,
     required this.name,
-    required this.description,
     required this.tier,
+    this.sla = '',
+    this.contract = '',
+    this.activeProjects = 0,
   });
 
+  /// Identificador no banco. Vazio enquanto o cliente não foi salvo.
   final String id;
   final String name;
-  final String description;
   final ClientTier tier;
 
-  String get initials {
-    final parts = name.split(' ');
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+  /// Acordo de nível de serviço (ex.: "SLA 4h").
+  final String sla;
+
+  /// Referência do contrato (ex.: "Contrato Enterprise #490").
+  final String contract;
+
+  /// Projetos em andamento deste cliente.
+  final int activeProjects;
+
+  String get initials => initialsOf(name);
+
+  Client withActiveProjects(int count) => Client(
+    id: id,
+    name: name,
+    tier: tier,
+    sla: sla,
+    contract: contract,
+    activeProjects: count,
+  );
+
+  /// Resumo exibido na lista de clientes.
+  String get description {
+    final parts = [
+      if (activeProjects == 1) '1 projeto ativo',
+      if (activeProjects > 1) '$activeProjects projetos ativos',
+      if (sla.isNotEmpty) sla,
+    ];
+    return parts.isEmpty ? 'Sem projetos ativos' : parts.join(' • ');
   }
 }
 
@@ -94,17 +151,26 @@ class PortfolioSummary {
     required this.activeDemands,
     required this.newThisMonth,
     required this.averageDeliveryRate,
-    required this.deliveryRateDelta,
     required this.activeDevs,
     required this.totalDevs,
     required this.onTimeRate,
   });
 
+  /// Projetos em andamento.
   final int activeDemands;
+
+  /// Projetos criados no mês corrente.
   final int newThisMonth;
+
+  /// Média de progresso dos projetos em andamento.
   final double averageDeliveryRate;
-  final double deliveryRateDelta;
+
+  /// Pessoas alocadas em projetos em andamento.
   final int activeDevs;
+
+  /// Pessoas ativas na equipe.
   final int totalDevs;
-  final double onTimeRate;
+
+  /// Tarefas concluídas no prazo; `null` quando nenhuma tinha prazo.
+  final double? onTimeRate;
 }

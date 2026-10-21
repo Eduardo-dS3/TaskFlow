@@ -3,6 +3,9 @@ import 'seed_calendar.dart';
 import 'seed_members.dart';
 import 'seed_webhook_task.dart';
 
+/// Sprint ativa dos dados de exemplo.
+const seedActiveSprint = 'Sprint #28 (Q4)';
+
 /// Tarefas iniciais do quadro.
 List<Task> seedTasks(SeedCalendar calendar) => [
   ..._pendingTasks(calendar),
@@ -10,28 +13,6 @@ List<Task> seedTasks(SeedCalendar calendar) => [
   seedWebhookTask(calendar),
   ..._doneTasks(calendar),
 ];
-
-/// Indicadores da sprint ativa exibidos no topo do quadro.
-const seedSprintOverview = SprintOverview(
-  sprintName: 'Sprint #28 (Q4)',
-  totalTasks: 42,
-  monthGrowth: 0.12,
-  teamCapacity: 0.94,
-  pending: 14,
-  blockers: 3,
-  inProgress: 16,
-  allocatedDevs: 8,
-  done: 12,
-  onTimeRate: 0.88,
-  onlineMembers: [
-    SeedMembers.mariana,
-    SeedMembers.gabriel,
-    SeedMembers.carla,
-    SeedMembers.rodrigo,
-    SeedMembers.beatriz,
-    SeedMembers.camila,
-  ],
-);
 
 List<Task> _pendingTasks(SeedCalendar calendar) => [
   Task(
@@ -44,9 +25,15 @@ List<Task> _pendingTasks(SeedCalendar calendar) => [
     status: TaskStatus.pending,
     priority: TaskPriority.urgent,
     category: 'App Mobile',
+    sprint: seedActiveSprint,
+    projectId: 'p-1',
+    projectName: 'App Mobile Flutter iOS/Android',
+    clientName: 'TechVanguard Inc.',
     assignees: const [SeedMembers.rodrigo],
     dueDate: calendar.days(1),
+    estimatedHours: 16,
     subtasks: _placeholderSubtasks(5, 2),
+    createdAt: calendar.days(-6),
   ),
   Task(
     id: 't-1002',
@@ -58,9 +45,14 @@ List<Task> _pendingTasks(SeedCalendar calendar) => [
     status: TaskStatus.pending,
     priority: TaskPriority.medium,
     category: 'Marketing Web',
+    projectId: 'p-4',
+    projectName: 'Landing Page & Blog Institucional',
+    clientName: 'Studio Design Co.',
     assignees: const [SeedMembers.mariana],
     dueDate: calendar.days(3),
+    estimatedHours: 6,
     subtasks: _placeholderSubtasks(2, 0),
+    createdAt: calendar.days(-2),
   ),
   Task(
     id: 't-1003',
@@ -72,8 +64,13 @@ List<Task> _pendingTasks(SeedCalendar calendar) => [
     status: TaskStatus.pending,
     priority: TaskPriority.high,
     category: 'Backend Core',
+    sprint: seedActiveSprint,
+    projectId: 'p-5',
+    projectName: 'Refatoração da API e Microserviços',
     assignees: const [SeedMembers.lucasRibeiro],
     dueDate: calendar.days(8),
+    estimatedHours: 12,
+    createdAt: calendar.days(-1),
   ),
 ];
 
@@ -84,14 +81,20 @@ List<Task> _inProgressTasks(SeedCalendar calendar) => [
     title: 'Configuração do Pipeline CI/CD Flutter',
     summary:
         'Automação de testes unitários, build e deploy de release '
-        'para Firebase Hosting e lojas.',
+        'para o servidor de produção.',
     status: TaskStatus.inProgress,
     priority: TaskPriority.high,
     category: 'DevOps',
+    sprint: seedActiveSprint,
+    projectId: 'p-5',
+    projectName: 'Refatoração da API e Microserviços',
     assignees: const [SeedMembers.gabriel],
     dueDate: calendar.days(0),
+    estimatedHours: 20,
+    loggedHours: 13,
     progress: 0.65,
     commentCount: 3,
+    createdAt: calendar.days(-12),
   ),
   Task(
     id: 't-1011',
@@ -103,8 +106,15 @@ List<Task> _inProgressTasks(SeedCalendar calendar) => [
     status: TaskStatus.inProgress,
     priority: TaskPriority.medium,
     category: 'Design',
+    sprint: seedActiveSprint,
+    projectId: 'p-1',
+    projectName: 'App Mobile Flutter iOS/Android',
+    clientName: 'TechVanguard Inc.',
     assignees: const [SeedMembers.beatriz, SeedMembers.andre],
+    estimatedHours: 24,
+    loggedHours: 10,
     subtasks: _placeholderSubtasks(6, 4),
+    createdAt: calendar.days(-9),
   ),
 ];
 
@@ -119,9 +129,17 @@ List<Task> _doneTasks(SeedCalendar calendar) => [
     status: TaskStatus.done,
     priority: TaskPriority.high,
     category: 'Flutter Web',
+    sprint: seedActiveSprint,
+    projectId: 'p-1',
+    projectName: 'App Mobile Flutter iOS/Android',
+    clientName: 'TechVanguard Inc.',
     assignees: const [SeedMembers.rodrigo],
+    dueDate: calendar.days(1),
     completedAt: calendar.days(0),
+    estimatedHours: 8,
+    loggedHours: 8,
     reviewed: true,
+    createdAt: calendar.days(-15),
   ),
   Task(
     id: 't-0991',
@@ -133,8 +151,15 @@ List<Task> _doneTasks(SeedCalendar calendar) => [
     status: TaskStatus.done,
     priority: TaskPriority.low,
     category: 'Design',
+    projectId: 'p-4',
+    projectName: 'Landing Page & Blog Institucional',
+    clientName: 'Studio Design Co.',
     assignees: const [SeedMembers.andre],
+    dueDate: calendar.days(-3),
     completedAt: calendar.days(-1),
+    estimatedHours: 4,
+    loggedHours: 5,
+    createdAt: calendar.days(-20),
   ),
 ];
 

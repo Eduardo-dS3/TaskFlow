@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/project/project_repository.dart';
+import '../../../data/repositories/settings/settings_repository.dart';
 import '../../../data/repositories/task/task_repository.dart';
 import '../../../data/repositories/user/user_repository.dart';
 import '../../../domain/models/member.dart';
@@ -9,35 +10,51 @@ import '../../../domain/models/task.dart';
 import '../../../utils/command.dart';
 import '../../../utils/result.dart';
 
+/// Arquivo escolhido pelo usuário para anexar.
+typedef PickedFile = ({String name, List<int> bytes});
+
 /// ViewModel da tela de cadastro e edição de tarefas.
 ///
 /// Quando `taskId` é nulo, uma nova tarefa em branco é criada.
 /// As edições são aplicadas a uma cópia de trabalho imutável ([task]) e só
-/// são persistidas pelo comando [save].
+/// são persistidas pelo comando [save]. Comentários e anexos são salvos na
+/// hora, pois ficam em coleções próprias.
 class TaskDetailsViewModel extends ChangeNotifier {
   TaskDetailsViewModel({
     required this._taskRepository,
     required this._userRepository,
     required this._projectRepository,
+    required this._settingsRepository,
     this._taskId,
+    this._initialStatus = TaskStatus.pending,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now {
     load = Command0(_load)..execute();
     save = Command0(_save);
     delete = Command0(_delete);
     addComment = Command1(_addComment);
+    uploadAttachment = Command1(_uploadAttachment);
+    deleteAttachment = Command1(_deleteAttachment);
+    openAttachment = Command1(_taskRepository.attachmentUrl);
   }
 
   final TaskRepository _taskRepository;
   final UserRepository _userRepository;
   final ProjectRepository _projectRepository;
+  final SettingsRepository _settingsRepository;
   final String? _taskId;
+  final TaskStatus _initialStatus;
   final DateTime Function() _clock;
 
   late final Command0<void> load;
   late final Command0<Task> save;
   late final Command0<void> delete;
   late final Command1<void, String> addComment;
+  late final Command1<void, PickedFile> uploadAttachment;
+  late final Command1<void, Attachment> deleteAttachment;
+
+  /// Gera o endereço temporário para abrir um anexo.
+  late final Command1<Uri, Attachment> openAttachment;
 
   Task? _task;
   Task? get task => _task;
@@ -52,18 +69,25 @@ class TaskDetailsViewModel extends ChangeNotifier {
   DateTime? _lastSavedAt;
   DateTime? get lastSavedAt => _lastSavedAt;
 
+  Member? _currentUser;
+  Member? get currentUser => _currentUser;
+
   List<Member> _members = [];
-  List<Member> get members => _members;
+
+  /// Pessoas ativas que podem ser atribuídas.
+  List<Member> get members => _members.where((m) => m.active).toList();
 
   List<Project> _projects = [];
-  List<String> get projectNames => [
-    if (_task?.projectName case final current?
-        when !_projects.any((p) => p.name == current))
-      current,
-    for (final p in _projects) p.name,
-  ];
+  List<Project> get projects => _projects;
 
   DateTime get now => _clock();
+
+  /// A pessoa pode excluir: administradores ou o responsável pela tarefa.
+  bool get canDelete {
+    final user = _currentUser;
+    if (user == null || isNew) return false;
+    return user.isAdmin || _task?.owner == user;
+  }
 
   // ---------------------------------------------------------------------------
   // Edição
@@ -88,20 +112,46 @@ class TaskDetailsViewModel extends ChangeNotifier {
   void setPriority(TaskPriority priority) =>
       _update((t) => t.copyWith(priority: priority));
 
-  void setProject(String projectName) {
-    final project = _projects.where((p) => p.name == projectName).firstOrNull;
+  void setCategory(String value) =>
+      _update((t) => t.copyWith(category: value.trim()));
+
+  void setSprint(String value) =>
+      _update((t) => t.copyWith(sprint: value.trim()));
+
+  /// Vincula a tarefa a um projeto (`null` desvincula).
+  void setProject(String? projectId) {
+    final project = _projects.where((p) => p.id == projectId).firstOrNull;
     _update(
-      (t) =>
-          t.copyWith(projectName: projectName, clientName: project?.clientName),
+      (t) => t.copyWith(
+        links: t.links.withProject(
+          id: project?.id,
+          name: project?.name,
+          clientName: project?.clientName,
+        ),
+      ),
     );
   }
 
-  void setOwner(Member member) => _update((t) => t.copyWith(owner: member));
+  void setOwner(Member? member) =>
+      _update((t) => t.copyWith(links: t.links.withOwner(member)));
 
-  void setStartDate(DateTime date) =>
-      _update((t) => t.copyWith(startDate: date));
+  void setAssignees(List<Member> members) =>
+      _update((t) => t.copyWith(links: t.links.withAssignees(members)));
 
-  void setDueDate(DateTime date) => _update((t) => t.copyWith(dueDate: date));
+  void setDates({required DateTime? start, required DateTime? due}) => _update(
+    (t) => t.copyWith(
+      schedule: t.schedule.withDates(startDate: start, dueDate: due),
+    ),
+  );
+
+  void setHours({required double estimated, required double logged}) => _update(
+    (t) => t.copyWith(
+      schedule: t.schedule.withHours(
+        estimatedHours: estimated,
+        loggedHours: logged,
+      ),
+    ),
+  );
 
   void addTag(String value) {
     final tag = value.trim().replaceFirst(RegExp('^#'), '');
@@ -149,29 +199,39 @@ class TaskDetailsViewModel extends ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   Future<Result<void>> _load() async {
-    final taskResult = _taskId == null
-        ? await _taskRepository.createDraft()
-        : await _taskRepository.getTask(_taskId);
-
-    switch (taskResult) {
-      case Ok():
-        _task = taskResult.value;
-      case Error():
-        notifyListeners();
-        return taskResult;
-    }
-
     // Dados auxiliares: uma falha aqui não impede a edição da tarefa.
-    if (await _userRepository.getMembers() case Ok(:final value)) {
-      _members = value;
-    }
-    if (await _projectRepository.getProjects() case Ok(:final value)) {
-      _projects = value;
-    }
+    final auxiliary = await (
+      _userRepository.getCurrentUser(),
+      _userRepository.getMembers(),
+      _projectRepository.getProjects(),
+    ).wait;
+    if (auxiliary.$1 case Ok(:final value)) _currentUser = value;
+    if (auxiliary.$2 case Ok(:final value)) _members = value;
+    if (auxiliary.$3 case Ok(:final value)) _projects = value;
 
-    _lastSavedAt = isNew ? null : now.subtract(const Duration(minutes: 2));
+    final taskResult = await _loadTask();
+    if (taskResult case Ok(:final value)) _task = value;
+    _lastSavedAt = null;
     notifyListeners();
-    return const Result.ok(null);
+    return taskResult;
+  }
+
+  Future<Result<Task>> _loadTask() async {
+    final id = _taskId;
+    if (id != null) return _taskRepository.getTask(id);
+    final settings = await _settingsRepository.getSettings();
+    final sprint = switch (settings) {
+      Ok(:final value) => value.activeSprint,
+      Error() => '',
+    };
+    return Result.ok(
+      Task.draft(
+        now: now,
+        owner: _currentUser,
+        status: _initialStatus,
+        sprint: sprint,
+      ),
+    );
   }
 
   Future<Result<Task>> _save() async {
@@ -197,20 +257,50 @@ class TaskDetailsViewModel extends ChangeNotifier {
   Future<Result<void>> _addComment(String body) async {
     final current = _task;
     if (current == null || body.trim().isEmpty) {
-      return Result.error(Exception('Comentário vazio'));
+      return Result.error(Exception('Escreva o comentário antes de enviar'));
     }
     final result = await _taskRepository.addComment(current.id, body.trim());
     switch (result) {
-      case Ok():
-        // Preserva edições locais e incorpora apenas os comentários.
-        _task = current.copyWith(
-          comments: result.value.comments,
-          commentCount: result.value.commentCount,
-        );
+      case Ok(:final value):
+        // Preserva as edições locais e incorpora só o novo comentário.
+        _task = _task!.withComment(value);
         notifyListeners();
         return const Result.ok(null);
-      case Error():
-        return Result.error(result.error);
+      case Error(:final error):
+        return Result.error(error);
     }
+  }
+
+  Future<Result<void>> _uploadAttachment(PickedFile file) async {
+    final current = _task;
+    if (current == null || !current.isSaved) {
+      return Result.error(Exception('Salve a tarefa antes de anexar arquivos'));
+    }
+    final result = await _taskRepository.uploadAttachment(
+      current.id,
+      fileName: file.name,
+      bytes: file.bytes,
+    );
+    switch (result) {
+      case Ok(:final value):
+        _task = _task!.copyWith(attachments: [..._task!.attachments, value]);
+        notifyListeners();
+        return const Result.ok(null);
+      case Error(:final error):
+        return Result.error(error);
+    }
+  }
+
+  Future<Result<void>> _deleteAttachment(Attachment attachment) async {
+    final result = await _taskRepository.deleteAttachment(attachment);
+    if (result case Ok()) {
+      _task = _task!.copyWith(
+        attachments: _task!.attachments
+            .where((a) => a.id != attachment.id)
+            .toList(),
+      );
+      notifyListeners();
+    }
+    return result;
   }
 }

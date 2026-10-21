@@ -3,7 +3,7 @@ import 'package:taskflow/domain/models/member.dart';
 import 'package:taskflow/domain/models/task.dart';
 
 void main() {
-  const task = Task(
+  final task = Task(
     id: 't-1',
     code: 'TK-1',
     title: 'Tarefa',

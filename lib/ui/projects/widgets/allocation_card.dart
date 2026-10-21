@@ -31,8 +31,8 @@ class AllocationCard extends StatelessWidget {
           SectionTitle(
             title: 'Capacidade & Alocação do Time',
             subtitle:
-                'Distribuição de horas semanais alocadas por frente de '
-                'desenvolvimento',
+                'Horas restantes das tarefas em andamento, por projeto, sobre '
+                'a capacidade semanal de cada pessoa',
             trailing: Pill(
               label:
                   '${Formatters.percent(viewModel.totalOccupancy)} '
@@ -42,6 +42,14 @@ class AllocationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          if (viewModel.allocations.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Text(
+                'Nenhuma tarefa em andamento com horas estimadas.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
           for (final allocation in viewModel.allocations)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -51,20 +59,7 @@ class AllocationCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _FrontsLegend(
-                  fronts: viewModel.fronts,
-                  colorFor: _colorFor,
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('Ver matriz completa →'),
-              ),
-            ],
-          ),
+          _FrontsLegend(fronts: viewModel.fronts, colorFor: _colorFor),
         ],
       ),
     );
@@ -148,7 +143,13 @@ class _FrontsLegend extends StatelessWidget {
             children: [
               Icon(Icons.circle, size: 10, color: colorFor(front)),
               const SizedBox(width: 6),
-              Text(front, style: const TextStyle(fontSize: 12)),
+              Flexible(
+                child: Text(
+                  front,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
             ],
           ),
       ],

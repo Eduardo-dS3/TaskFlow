@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../config/server_config.dart';
 import '../../../routing/routes.dart';
 import '../../core/themes/colors.dart';
 
@@ -7,13 +8,13 @@ class Sidebar extends StatelessWidget {
   const Sidebar({
     super.key,
     required this.location,
-    required this.synced,
     required this.onNavigate,
+    required this.onHelp,
   });
 
   final String location;
-  final bool synced;
   final ValueChanged<String> onNavigate;
+  final VoidCallback onHelp;
 
   static const _items = [
     (Icons.view_kanban_outlined, 'Quadro & Tarefas', Routes.board),
@@ -49,14 +50,9 @@ class Sidebar extends StatelessWidget {
                 onTap: () => onNavigate(route),
               ),
             const Spacer(),
-            _SyncBadge(synced: synced),
+            _NavItem(icon: Icons.help_outline, label: 'Ajuda', onTap: onHelp),
             const SizedBox(height: 8),
-            _NavItem(
-              icon: Icons.settings_outlined,
-              label: 'Configurações',
-              onTap: () {},
-            ),
-            _NavItem(icon: Icons.help_outline, label: 'Ajuda', onTap: () {}),
+            const _VersionBadge(),
           ],
         ),
       ),
@@ -69,35 +65,15 @@ class _Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          const Icon(
-            Icons.task_alt_rounded,
-            color: AppColors.primary,
-            size: 28,
-          ),
-          const SizedBox(width: 10),
-          const Text(
+          Icon(Icons.task_alt_rounded, color: AppColors.primary, size: 28),
+          SizedBox(width: 10),
+          Text(
             'TaskFlow',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'PRO',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
           ),
         ],
       ),
@@ -154,10 +130,8 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _SyncBadge extends StatelessWidget {
-  const _SyncBadge({required this.synced});
-
-  final bool synced;
+class _VersionBadge extends StatelessWidget {
+  const _VersionBadge();
 
   @override
   Widget build(BuildContext context) {
@@ -167,22 +141,18 @@ class _SyncBadge extends StatelessWidget {
         color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          Icon(
-            Icons.circle,
-            size: 8,
-            color: synced ? AppColors.successBright : AppColors.warning,
-          ),
-          const SizedBox(width: 6),
+          Icon(Icons.circle, size: 8, color: AppColors.successBright),
+          SizedBox(width: 6),
           Text(
-            synced ? 'Sincronizado' : 'Sincronizando…',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-          ),
-          const Spacer(),
-          const Text(
-            'Flutter Web',
+            'Conectado',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+          ),
+          Spacer(),
+          Text(
+            'v$appVersion',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
           ),
         ],
       ),

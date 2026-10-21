@@ -55,7 +55,7 @@ class TaskCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            task.summary,
+            task.excerpt,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -93,10 +93,16 @@ class TaskCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              ..._meta(),
-              const Spacer(),
+              Expanded(
+                child: Wrap(
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: _meta(),
+                ),
+              ),
+              const SizedBox(width: 8),
               AvatarStack(
-                initials: [for (final m in task.assignees) m.initials],
+                initials: [for (final m in task.links.people) m.initials],
                 size: 26,
               ),
             ],
@@ -127,9 +133,12 @@ class TaskCard extends StatelessWidget {
                 color: color,
               ),
               const SizedBox(width: 4),
-              Text(
-                Formatters.completedLabel(completedAt, now),
-                style: style.copyWith(color: color),
+              Flexible(
+                child: Text(
+                  Formatters.completedLabel(completedAt, now),
+                  overflow: TextOverflow.ellipsis,
+                  style: style.copyWith(color: color),
+                ),
               ),
             ],
           ),

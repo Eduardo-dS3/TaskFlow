@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../../../domain/models/task.dart';
+import '../../../routing/routes.dart';
 import '../../core/localization/formatters.dart';
 import '../../core/themes/colors.dart';
+import '../../core/ui/feedback.dart';
 import '../../core/ui/pill.dart';
 import '../../core/ui/surface_card.dart';
 import '../view_models/task_details_viewmodel.dart';
@@ -138,10 +142,10 @@ class _TaskHeaderState extends State<TaskHeader> {
   String _saveLabel(TaskDetailsViewModel vm) {
     if (vm.save.running) return 'Salvando…';
     if (vm.dirty) return 'Alterações não salvas';
+    if (vm.isNew) return 'Rascunho';
     final saved = vm.lastSavedAt;
-    if (saved == null) return 'Rascunho';
-    final minutes = vm.now.difference(saved).inMinutes;
-    return minutes < 1 ? 'Salvo agora' : 'Salvo automaticamente há ${minutes}m';
+    if (saved == null) return 'Sem alterações';
+    return 'Salvo às ${DateFormat.Hm('pt_BR').format(saved)}';
   }
 
   Widget _titleBlock(Task task) {
@@ -213,17 +217,26 @@ class _TaskHeaderState extends State<TaskHeader> {
     );
   }
 
+  /// Copia o endereço da tarefa para enviar a outra pessoa da equipe.
+  Future<void> _copyLink(Task task) async {
+    final base = Uri.base;
+    final link = '${base.origin}${base.path}#${Routes.taskWithId(task.id)}';
+    await Clipboard.setData(ClipboardData(text: link));
+    if (mounted) showMessage(context, 'Link da tarefa copiado');
+  }
+
   Widget _actions(TaskDetailsViewModel vm) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        OutlinedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.share_outlined, size: 18),
-          label: const Text('Compartilhar'),
-        ),
         if (!vm.isNew)
+          OutlinedButton.icon(
+            onPressed: () => _copyLink(vm.task!),
+            icon: const Icon(Icons.share_outlined, size: 18),
+            label: const Text('Compartilhar'),
+          ),
+        if (vm.canDelete)
           ListenableBuilder(
             listenable: vm.delete,
             builder: (context, _) => OutlinedButton.icon(

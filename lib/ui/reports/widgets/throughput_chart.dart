@@ -54,40 +54,7 @@ class ThroughputChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            runSpacing: 8,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.check_circle_outline,
-                    size: 16,
-                    color: AppColors.success,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      'Taxa de vazão líquida positiva '
-                      '(+${report.netThroughputAboveGoal} tarefas acima da meta)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'Ver detalhamento de sprints',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
+          _NetThroughput(net: report.netThroughput),
         ],
       ),
     );
@@ -210,4 +177,37 @@ class _ThroughputPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ThroughputPainter oldDelegate) =>
       oldDelegate.completed != completed || oldDelegate.created != created;
+}
+
+/// Concluídas menos criadas no período: positivo indica backlog diminuindo.
+class _NetThroughput extends StatelessWidget {
+  const _NetThroughput({required this.net});
+
+  final int net;
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = net >= 0;
+    final color = positive ? AppColors.success : AppColors.danger;
+    return Row(
+      children: [
+        Icon(
+          positive ? Icons.check_circle_outline : Icons.trending_up,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            positive
+                ? 'Vazão líquida positiva: $net tarefa(s) concluída(s) além das '
+                      'criadas no período'
+                : 'Backlog crescendo: ${-net} tarefa(s) criada(s) além das '
+                      'concluídas no período',
+            style: TextStyle(fontSize: 12, color: color),
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -1,6 +1,18 @@
+import 'member.dart';
 import 'task.dart';
 
-enum ReportPeriod { last30Days, quarter, year, custom }
+enum ReportPeriod {
+  last30Days,
+  quarter,
+  year;
+
+  /// Início do período que termina em [now].
+  DateTime startFrom(DateTime now) => switch (this) {
+    ReportPeriod.last30Days => DateTime(now.year, now.month, now.day - 30),
+    ReportPeriod.quarter => DateTime(now.year, ((now.month - 1) ~/ 3) * 3 + 1),
+    ReportPeriod.year => DateTime(now.year),
+  };
+}
 
 class WeeklyThroughput {
   const WeeklyThroughput({
@@ -36,8 +48,8 @@ class MemberPerformance {
   final int completed;
   final int inProgress;
 
-  /// Percentual de entregas no prazo (0..1).
-  final double efficiency;
+  /// Percentual de entregas no prazo (0..1); `null` sem entregas com prazo.
+  final double? efficiency;
 
   /// Carga de trabalho (0..1).
   final double workload;
@@ -45,10 +57,7 @@ class MemberPerformance {
   final bool isClient;
   final String? workloadNote;
 
-  String get initials {
-    final parts = name.split(' ');
-    return (parts.first[0] + parts.last[0]).toUpperCase();
-  }
+  String get initials => initialsOf(name);
 }
 
 class ProductivityReport {
@@ -61,32 +70,44 @@ class ProductivityReport {
     required this.resolutionDeltaDays,
     required this.finishedTasks,
     required this.activeTasks,
+    required this.sprintName,
     required this.sprintProgress,
-    required this.criticalBlockers,
+    required this.criticalOverdue,
     required this.weeklyThroughput,
     required this.statusDistribution,
     required this.priorityDistribution,
     required this.members,
     required this.totalMembers,
-    required this.netThroughputAboveGoal,
+    required this.netThroughput,
   });
 
   final ReportPeriod period;
-  final double onTimeRate;
+
+  /// Concluídas no prazo no período; `null` quando nenhuma tinha prazo.
+  final double? onTimeRate;
   final double slaTarget;
-  final double previousOnTimeRate;
-  final double averageResolutionDays;
-  final double resolutionDeltaDays;
+  final double? previousOnTimeRate;
+
+  /// Dias entre a criação e a conclusão; `null` sem conclusões no período.
+  final double? averageResolutionDays;
+  final double? resolutionDeltaDays;
   final int finishedTasks;
   final int activeTasks;
-  final double sprintProgress;
-  final int criticalBlockers;
+  final String sprintName;
+
+  /// Progresso da sprint ativa; `null` quando ela não tem tarefas.
+  final double? sprintProgress;
+
+  /// Tarefas urgentes ou de alta prioridade atrasadas há mais de 48h.
+  final int criticalOverdue;
   final List<WeeklyThroughput> weeklyThroughput;
   final Map<TaskStatus, int> statusDistribution;
   final Map<TaskPriority, int> priorityDistribution;
   final List<MemberPerformance> members;
   final int totalMembers;
-  final int netThroughputAboveGoal;
+
+  /// Concluídas menos criadas no período (positivo = backlog diminuindo).
+  final int netThroughput;
 
   int get remainingTasks => activeTasks - finishedTasks;
 

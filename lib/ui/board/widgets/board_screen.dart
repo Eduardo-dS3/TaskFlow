@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../routing/routes.dart';
+import '../../core/platform/file_actions.dart';
 import '../../core/themes/dimens.dart';
 import '../../core/ui/command_view.dart';
 import '../view_models/board_viewmodel.dart';
@@ -43,6 +44,15 @@ class _BoardScreenState extends State<BoardScreen> {
     super.dispose();
   }
 
+  void _export() {
+    final date = DateTime.now().toIso8601String().substring(0, 10);
+    saveFile(
+      widget.viewModel.exportCsv(),
+      'quadro-tarefas-$date.csv',
+      'text/csv',
+    );
+  }
+
   void _onMoveResult() {
     final command = widget.viewModel.moveTask;
     if (command.error) {
@@ -75,6 +85,7 @@ class _BoardScreenState extends State<BoardScreen> {
                     BoardToolbar(
                       viewModel: viewModel,
                       onCreateTask: () => context.go(Routes.newTask),
+                      onExport: _export,
                     ),
                     const SizedBox(height: 20),
                     if (viewModel.overview case final overview?)
@@ -83,6 +94,8 @@ class _BoardScreenState extends State<BoardScreen> {
                     switch (viewModel.viewMode) {
                       BoardViewMode.kanban => BoardKanban(
                         viewModel: viewModel,
+                        onCreateTask: (status) =>
+                            context.go(Routes.newTaskWithStatus(status)),
                         onOpenTask: (task) =>
                             context.go(Routes.taskWithId(task.id)),
                       ),
@@ -94,7 +107,10 @@ class _BoardScreenState extends State<BoardScreen> {
                     },
                     const SizedBox(height: 24),
                     if (viewModel.overview case final overview?)
-                      BoardFooter(onlineMembers: overview.onlineMembers),
+                      BoardFooter(
+                        onlineMembers: overview.onlineMembers,
+                        loadedAt: viewModel.loadedAt,
+                      ),
                   ],
                 ),
               );
