@@ -23,6 +23,10 @@ class ShellViewModel extends ChangeNotifier {
     load = Command0(_load);
     logout = Command0(_authRepository.logout);
     _authRepository.addListener(_onAuthChanged);
+    _profileSubscription = _userRepository.currentUserChanges.listen((user) {
+      _user = user;
+      notifyListeners();
+    });
     _onAuthChanged();
   }
 
@@ -35,6 +39,7 @@ class ShellViewModel extends ChangeNotifier {
   final DateTime Function() _clock;
   final Duration _heartbeat;
   Timer? _timer;
+  late final StreamSubscription<Member> _profileSubscription;
 
   late final Command0<void> load;
   late final Command0<void> logout;
@@ -92,6 +97,7 @@ class ShellViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_profileSubscription.cancel());
     _authRepository.removeListener(_onAuthChanged);
     super.dispose();
   }

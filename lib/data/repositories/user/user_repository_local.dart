@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import '../../../domain/models/member.dart';
+import '../../../domain/models/team_rules.dart';
 import '../../../utils/result.dart';
 import '../../services/local/local_data_service.dart';
 import 'user_repository.dart';
@@ -11,6 +14,16 @@ class UserRepositoryLocal implements UserRepository {
     : _service = localDataService;
 
   final LocalDataService _service;
+  final _changes = StreamController<Member>.broadcast();
+
+  @override
+  Stream<Member> get currentUserChanges => _changes.stream;
+
+  Member _save(Member member) {
+    _service.upsertMember(member);
+    if (member.id == _service.currentUser.id) _changes.add(member);
+    return member;
+  }
 
   @override
   Future<Result<Member>> getCurrentUser() async =>
@@ -30,7 +43,7 @@ class UserRepositoryLocal implements UserRepository {
     }
     final user = _service.currentUser;
     return Result.ok(
-      _service.upsertMember(_copy(user, name: name.trim(), role: role.trim())),
+      _save(user.copyWith(name: name.trim(), role: role.trim())),
     );
   }
 
@@ -42,7 +55,9 @@ class UserRepositoryLocal implements UserRepository {
 
   @override
   Future<Result<void>> markPresence() async {
-    _service.upsertMember(_copy(_service.currentUser, lastSeen: _service.now));
+    _service.upsertMember(
+      _service.currentUser.copyWith(lastSeen: _service.now),
+    );
     return const Result.ok(null);
   }
 
@@ -60,7 +75,7 @@ class UserRepositoryLocal implements UserRepository {
       isAdmin: data.isAdmin,
       weeklyCapacity: data.weeklyCapacity,
     );
-    return Result.ok(_service.upsertMember(member));
+    return Result.ok(_save(member));
   }
 
   @override
@@ -68,7 +83,10 @@ class UserRepositoryLocal implements UserRepository {
     if (_service.findMember(member.id) == null) {
       return Result.error(Exception('Pessoa não encontrada'));
     }
-    return Result.ok(_service.upsertMember(member));
+    if (!keepsActiveAdmin(_service.members, member)) {
+      return Result.error(Exception(lastAdminMessage));
+    }
+    return Result.ok(_save(member));
   }
 
   @override
@@ -76,20 +94,4 @@ class UserRepositoryLocal implements UserRepository {
     String memberId,
     String newPassword,
   ) async => const Result.ok(null);
-
-  static Member _copy(
-    Member member, {
-    String? name,
-    String? role,
-    DateTime? lastSeen,
-  }) => Member(
-    id: member.id,
-    name: name ?? member.name,
-    role: role ?? member.role,
-    email: member.email,
-    isAdmin: member.isAdmin,
-    active: member.active,
-    weeklyCapacity: member.weeklyCapacity,
-    lastSeen: lastSeen ?? member.lastSeen,
-  );
 }

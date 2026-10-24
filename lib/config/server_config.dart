@@ -13,8 +13,16 @@ const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
 
 const _authStorageKey = 'taskflow_auth';
 
-String get apiBaseUrl =>
-    _apiUrlOverride.isNotEmpty ? _apiUrlOverride : Uri.base.origin;
+/// Endereço usado quando o app não roda a partir de um servidor HTTP
+/// (ex.: testes automatizados).
+const _fallbackUrl = 'http://localhost:8090';
+
+String get apiBaseUrl {
+  if (_apiUrlOverride.isNotEmpty) return _apiUrlOverride;
+  final base = Uri.base;
+  final isHttp = base.scheme == 'http' || base.scheme == 'https';
+  return isHttp ? base.origin : _fallbackUrl;
+}
 
 /// Cliente do PocketBase com a sessão persistida no navegador.
 Future<PocketBase> createPocketBase() async {

@@ -8,11 +8,13 @@ class Sidebar extends StatelessWidget {
   const Sidebar({
     super.key,
     required this.location,
+    required this.isAdmin,
     required this.onNavigate,
     required this.onHelp,
   });
 
   final String location;
+  final bool isAdmin;
   final ValueChanged<String> onNavigate;
   final VoidCallback onHelp;
 
@@ -50,6 +52,19 @@ class Sidebar extends StatelessWidget {
                 onTap: () => onNavigate(route),
               ),
             const Spacer(),
+            if (isAdmin)
+              _NavItem(
+                icon: Icons.groups_outlined,
+                label: 'Equipe',
+                active: location == Routes.team,
+                onTap: () => onNavigate(Routes.team),
+              ),
+            _NavItem(
+              icon: Icons.settings_outlined,
+              label: 'Configurações',
+              active: location == Routes.settings,
+              onTap: () => onNavigate(Routes.settings),
+            ),
             _NavItem(icon: Icons.help_outline, label: 'Ajuda', onTap: onHelp),
             const SizedBox(height: 8),
             const _VersionBadge(),

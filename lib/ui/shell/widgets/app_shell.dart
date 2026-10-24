@@ -36,6 +36,7 @@ class AppShell extends StatelessWidget {
           listenable: viewModel,
           builder: (context, _) => Sidebar(
             location: location,
+            isAdmin: viewModel.isAdmin,
             onNavigate: navigate,
             onHelp: () => showHelpDialog(context),
           ),
@@ -62,6 +63,7 @@ class AppShell extends StatelessWidget {
                           context.go(Routes.boardSearch(query)),
                       onOpenTask: (task) =>
                           context.go(Routes.taskWithId(task.id)),
+                      onOpenSettings: () => context.go(Routes.settings),
                     ),
                     Expanded(child: child),
                   ],

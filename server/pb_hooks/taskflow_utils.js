@@ -48,6 +48,29 @@ function adjustCommentCount(app, taskId, delta) {
 }
 
 /**
+ * Impede que a equipe fique sem nenhum administrador ativo, seja ao
+ * rebaixar/desativar a conta ([removing] = false) ou ao excluí-la.
+ */
+function ensureActiveAdmin(app, record, removing) {
+  const before = record.original()
+  const wasActiveAdmin = before.getBool("isAdmin") && before.getBool("active")
+  const staysActiveAdmin =
+    !removing && record.getBool("isAdmin") && record.getBool("active")
+  if (!wasActiveAdmin || staysActiveAdmin) return
+
+  const others = app.countRecords(
+    "users",
+    $dbx.hashExp({ isAdmin: true, active: true }),
+    $dbx.not($dbx.hashExp({ id: record.id })),
+  )
+  if (others === 0) {
+    throw new BadRequestError(
+      "É preciso manter pelo menos um administrador ativo na equipe.",
+    )
+  }
+}
+
+/**
  * Indica se o endereço IPv6 é o loopback (::1), aceitando também a forma
  * expandida (0000:...:0001) que o servidor recebe no Windows.
  */
@@ -142,6 +165,7 @@ function handleSetup(e) {
 }
 
 module.exports = {
+  ensureActiveAdmin,
   nextTaskCode,
   syncCompletion,
   adjustCommentCount,

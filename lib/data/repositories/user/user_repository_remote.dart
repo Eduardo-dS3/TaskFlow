@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pocketbase/pocketbase.dart';
 
 import '../../../domain/models/member.dart';
@@ -14,13 +16,25 @@ class UserRepositoryRemote implements UserRepository {
   static const _users = ApiClient.usersCollection;
 
   final ApiClient _api;
+  final _changes = StreamController<Member>.broadcast();
 
-  Future<Result<Member>> _member(Future<Result<RecordModel>> request) async {
+  @override
+  Stream<Member> get currentUserChanges => _changes.stream;
+
+  /// Converte o registro e avisa quando o perfil do usuário logado mudou.
+  Future<Result<Member>> _member(
+    Future<Result<RecordModel>> request, {
+    bool notify = false,
+  }) async {
     final result = await request;
-    return switch (result) {
-      Ok(:final value) => Result.ok(memberFromRecord(value)),
-      Error(:final error) => Result.error(error),
-    };
+    switch (result) {
+      case Ok(:final value):
+        final member = memberFromRecord(value);
+        if (notify && member.id == _api.authId) _changes.add(member);
+        return Result.ok(member);
+      case Error(:final error):
+        return Result.error(error);
+    }
   }
 
   @override
@@ -51,6 +65,7 @@ class UserRepositoryRemote implements UserRepository {
       'name': name.trim(),
       'role': role.trim(),
     }),
+    notify: true,
   );
 
   @override
@@ -102,8 +117,10 @@ class UserRepositoryRemote implements UserRepository {
   );
 
   @override
-  Future<Result<Member>> updateMember(Member member) =>
-      _member(_api.update(_users, member.id, memberToBody(member)));
+  Future<Result<Member>> updateMember(Member member) => _member(
+    _api.update(_users, member.id, memberToBody(member)),
+    notify: true,
+  );
 
   @override
   Future<Result<void>> resetPassword(

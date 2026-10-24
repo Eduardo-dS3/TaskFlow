@@ -25,6 +25,9 @@ abstract class UserRepository {
   /// Usuário autenticado na sessão.
   Future<Result<Member>> getCurrentUser();
 
+  /// Emite o usuário logado sempre que o perfil dele é alterado.
+  Stream<Member> get currentUserChanges;
+
   /// Todas as pessoas da equipe, inclusive contas desativadas.
   Future<Result<List<Member>>> getMembers();
 

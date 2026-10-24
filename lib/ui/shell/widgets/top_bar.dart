@@ -15,6 +15,7 @@ class TopBar extends StatelessWidget {
     required this.onNewTask,
     required this.onSearch,
     required this.onOpenTask,
+    required this.onOpenSettings,
   });
 
   final ShellViewModel viewModel;
@@ -22,6 +23,7 @@ class TopBar extends StatelessWidget {
   final VoidCallback onNewTask;
   final ValueChanged<String> onSearch;
   final ValueChanged<Task> onOpenTask;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +57,7 @@ class TopBar extends StatelessWidget {
                       _UserMenu(
                         user: user,
                         compact: compact,
+                        onOpenSettings: onOpenSettings,
                         onLogout: viewModel.logout.execute,
                       ),
                   ],
@@ -180,11 +183,13 @@ class _UserMenu extends StatelessWidget {
   const _UserMenu({
     required this.user,
     required this.compact,
+    required this.onOpenSettings,
     required this.onLogout,
   });
 
   final Member user;
   final bool compact;
+  final VoidCallback onOpenSettings;
   final VoidCallback onLogout;
 
   @override
@@ -193,6 +198,13 @@ class _UserMenu extends StatelessWidget {
       tooltip: 'Minha conta',
       onSelected: (action) => action(),
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: onOpenSettings,
+          child: const ListTile(
+            leading: Icon(Icons.person_outline),
+            title: Text('Meu perfil e configurações'),
+          ),
+        ),
         PopupMenuItem(
           value: onLogout,
           child: const ListTile(

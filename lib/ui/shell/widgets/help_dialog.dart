@@ -52,9 +52,9 @@ class _HelpContent extends StatelessWidget {
     (
       Icons.admin_panel_settings_outlined,
       'Administração',
-      'O administrador cadastra a equipe no painel do servidor, em /_/ no '
-          'mesmo endereço do app (coleção "users", marcando "active"). '
-          'Backups, logs e o banco de dados também ficam nesse painel.',
+      'Administradores cadastram a equipe, redefinem senhas e desativam '
+          'contas em "Equipe". Backups, logs e o banco de dados ficam no '
+          'painel do servidor, em /_/ no mesmo endereço do app.',
     ),
   ];
 

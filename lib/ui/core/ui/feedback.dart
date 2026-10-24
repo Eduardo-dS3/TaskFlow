@@ -21,6 +21,21 @@ void showMessage(BuildContext context, String message) {
     ..showSnackBar(SnackBar(content: Text(message)));
 }
 
+/// Executa [action] (que aciona [command]) e mostra no rodapé a mensagem de
+/// sucesso ou o erro. Retorna `true` quando deu certo.
+Future<bool> runWithFeedback(
+  BuildContext context,
+  Command<Object?> command,
+  Future<void> Function() action, {
+  required String success,
+}) async {
+  await action();
+  if (!context.mounted) return false;
+  final error = commandError(command);
+  showMessage(context, error ?? success);
+  return error == null;
+}
+
 /// Pede confirmação antes de uma ação destrutiva.
 Future<bool> confirmAction(
   BuildContext context, {

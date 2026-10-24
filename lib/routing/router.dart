@@ -12,10 +12,14 @@ import '../ui/projects/view_models/projects_viewmodel.dart';
 import '../ui/projects/widgets/projects_screen.dart';
 import '../ui/reports/view_models/reports_viewmodel.dart';
 import '../ui/reports/widgets/reports_screen.dart';
+import '../ui/settings/view_models/settings_viewmodel.dart';
+import '../ui/settings/widgets/settings_screen.dart';
 import '../ui/shell/view_models/shell_viewmodel.dart';
 import '../ui/shell/widgets/app_shell.dart';
 import '../ui/task_details/view_models/task_details_viewmodel.dart';
 import '../ui/task_details/widgets/task_details_screen.dart';
+import '../ui/team/view_models/team_viewmodel.dart';
+import '../ui/team/widgets/team_screen.dart';
 import 'routes.dart';
 
 /// Configuração de navegação.
@@ -125,6 +129,25 @@ final _appRoutes = <RouteBase>[
           settingsRepository: context.read(),
         ),
       ),
+    ),
+  ),
+  GoRoute(
+    path: Routes.settings,
+    pageBuilder: (context, state) => _page(
+      state,
+      SettingsScreen(
+        viewModel: SettingsViewModel(
+          userRepository: context.read(),
+          settingsRepository: context.read(),
+        ),
+      ),
+    ),
+  ),
+  GoRoute(
+    path: Routes.team,
+    pageBuilder: (context, state) => _page(
+      state,
+      TeamScreen(viewModel: TeamViewModel(userRepository: context.read())),
     ),
   ),
 ];

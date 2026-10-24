@@ -78,3 +78,15 @@ onRecordCreate((e) => {
   }
   e.next()
 }, "users")
+
+onRecordUpdate((e) => {
+  const utils = require(`${__hooks}/taskflow_utils.js`)
+  utils.ensureActiveAdmin(e.app, e.record, false)
+  e.next()
+}, "users")
+
+onRecordDelete((e) => {
+  const utils = require(`${__hooks}/taskflow_utils.js`)
+  utils.ensureActiveAdmin(e.app, e.record, true)
+  e.next()
+}, "users")

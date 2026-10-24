@@ -39,6 +39,25 @@ class Member {
     return seen != null && now.difference(seen) < onlineWindow;
   }
 
+  Member copyWith({
+    String? name,
+    String? role,
+    String? email,
+    bool? isAdmin,
+    bool? active,
+    double? weeklyCapacity,
+    DateTime? lastSeen,
+  }) => Member(
+    id: id,
+    name: name ?? this.name,
+    role: role ?? this.role,
+    email: email ?? this.email,
+    isAdmin: isAdmin ?? this.isAdmin,
+    active: active ?? this.active,
+    weeklyCapacity: weeklyCapacity ?? this.weeklyCapacity,
+    lastSeen: lastSeen ?? this.lastSeen,
+  );
+
   @override
   bool operator ==(Object other) => other is Member && other.id == id;
 
