@@ -3,6 +3,20 @@
 // Regras de negócio executadas no servidor do TaskFlow.
 
 // ---------------------------------------------------------------------------
+// App web (pb_public)
+// ---------------------------------------------------------------------------
+
+// O navegador revalida os arquivos do app a cada acesso (resposta 304 quando
+// nada mudou): depois de atualizar o servidor ninguém fica na versão antiga.
+routerUse((e) => {
+  const path = e.request.url.path
+  if (!path.startsWith("/api/") && !path.startsWith("/_/")) {
+    e.response.header().set("Cache-Control", "no-cache")
+  }
+  return e.next()
+})
+
+// ---------------------------------------------------------------------------
 // Configuração inicial (primeiro administrador)
 // ---------------------------------------------------------------------------
 

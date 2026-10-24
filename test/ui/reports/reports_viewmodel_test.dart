@@ -9,6 +9,8 @@ import 'package:taskflow/utils/result.dart';
 import '../../../testing/fakes/fake_repositories.dart';
 
 void main() {
+  // Dá acesso aos assets (fontes do PDF).
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   late ReportsViewModel viewModel;
@@ -51,5 +53,7 @@ void main() {
     await viewModel.exportPdf.execute();
     final pdf = (viewModel.exportPdf.result as Ok<List<int>>).value;
     expect(ascii.decode(pdf.take(4).toList()), '%PDF');
+    // A Roboto embutida no app vai junto no documento.
+    expect(latin1.decode(pdf), contains('Roboto'));
   });
 }

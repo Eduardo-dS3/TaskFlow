@@ -7,6 +7,7 @@ import '../../../domain/models/project.dart';
 import '../../../domain/use_cases/build_report_use_case.dart';
 import '../../../utils/command.dart';
 import '../../../utils/result.dart';
+import '../export/pdf_theme.dart';
 import '../export/report_csv.dart';
 import '../export/report_pdf.dart';
 
@@ -131,6 +132,7 @@ class ReportsViewModel extends ChangeNotifier {
       scope: scope,
       organization: organization,
       generatedAt: _clock(),
+      theme: await loadPdfTheme(),
     );
     return Result.ok(bytes);
   }

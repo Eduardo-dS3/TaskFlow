@@ -14,6 +14,7 @@ abstract final class AppTheme {
 
     final base = ThemeData(
       useMaterial3: true,
+      fontFamily: 'Roboto',
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
       dividerColor: AppColors.border,

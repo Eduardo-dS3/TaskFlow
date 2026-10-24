@@ -18,6 +18,7 @@ Future<List<int>> reportPdf(
   required String scope,
   required String organization,
   required DateTime generatedAt,
+  pw.ThemeData? theme,
 }) {
   final document = pw.Document(
     title: 'Relatório de Produtividade',
@@ -30,6 +31,7 @@ Future<List<int>> reportPdf(
   document.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
+      theme: theme,
       margin: const pw.EdgeInsets.all(36),
       header: (context) => _header(organization, scope, report.period),
       footer: (context) => _footer(context, generated),

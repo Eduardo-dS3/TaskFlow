@@ -1,12 +1,13 @@
 {
-    "name": "taskflow",
-    "short_name": "taskflow",
+    "name": "TaskFlow",
+    "short_name": "TaskFlow",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F4F4FA",
+    "theme_color": "#3D33D6",
+    "description": "Gestão de tarefas, projetos e produtividade da equipe.",
+    "lang": "pt-BR",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
