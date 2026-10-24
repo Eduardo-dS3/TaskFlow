@@ -2,17 +2,21 @@
 name: Default Workflow
 
 on:
- # Runs this action when you push on master
- push:
-   branches: [ "main" ]
- # Runs this when a PR against master is created
- pull_request:
-   branches: [ "main" ]
+  push:
+    branches: [ "main", "feature/**" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+  POCKETBASE_VERSION: '0.40.5'
+  POCKETBASE_LINUX_SHA256: '1dbea1b01eb3dfe64953513859d01e759c96650c4e3264fa4eecd54b769382e4'
 
 jobs:
   validacao_pipeline:
     runs-on: ubuntu-latest
-    # timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
@@ -21,7 +25,8 @@ jobs:
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
-        flutter-version: '3.47.2'
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        cache: true
 
     - name: Flutter Doctor
       run: flutter doctor -v
@@ -32,5 +37,111 @@ jobs:
     - name: Flutter Format Check
       run: dart format --output=none --set-exit-if-changed .
 
+    # Os testes de integração sobem este PocketBase com o esquema real.
+    - name: Baixar o PocketBase
+      run: |
+        zip="pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip"
+        curl -fsSL -o "$zip" "https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/${zip}"
+        echo "${POCKETBASE_LINUX_SHA256}  ${zip}" | sha256sum -c -
+        unzip -o "$zip" pocketbase -d server
+        chmod +x server/pocketbase
+
     - name: Flutter Test
       run: flutter test
+
+  instalador_windows:
+    needs: validacao_pipeline
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        cache: true
+
+    - name: Gerar o instalador
+      shell: pwsh
+      run: powershell -NoProfile -ExecutionPolicy Bypass -File installer\build_installer.ps1
+
+    - name: Instalar (modo silencioso)
+      shell: pwsh
+      run: |
+        $setup = (Get-ChildItem build\installer\TaskFlow-Setup-*.exe).FullName
+        $p = Start-Process $setup -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/PORT=8090', "/LOG=$PWD\instalacao.log"
+        if ($p.ExitCode -ne 0) { Get-Content instalacao.log -Tail 60; throw "Instalação falhou ($($p.ExitCode))" }
+
+    - name: Testar o servidor instalado
+      shell: pwsh
+      run: |
+        $base = 'http://localhost:8090'
+        if ((Get-Service TaskFlow).Status -ne 'Running') { throw 'Serviço TaskFlow parado' }
+        Invoke-RestMethod "$base/api/health" | Out-Null
+        $index = Invoke-WebRequest "$base/board" -UseBasicParsing
+        if ($index.Content -notmatch '<title>TaskFlow</title>') { throw 'App web não encontrado' }
+        if ($index.Headers['Cache-Control'] -ne 'no-cache') { throw 'Cabeçalho de cache ausente' }
+        $login = Invoke-RestMethod -Method Post "$base/api/collections/users/auth-with-password" -ContentType 'application/json' -Body '{"identity":"sa","password":"256318"}'
+        $panel = Invoke-RestMethod -Method Post "$base/api/collections/_superusers/auth-with-password" -ContentType 'application/json' -Body '{"identity":"sa@taskflow.local","password":"256318"}'
+        if (-not $login.token -or -not $panel.token) { throw 'Login padrão falhou' }
+        $client = Invoke-RestMethod -Method Post "$base/api/collections/clients/records" -Headers @{ Authorization = $login.token } -ContentType 'application/json' -Body '{"name":"Cliente de teste","tier":"enterprise"}'
+        $client.id | Out-File cliente.txt
+        if (-not (Get-NetFirewallRule -DisplayName TaskFlow -ErrorAction SilentlyContinue)) { throw 'Regra de firewall ausente' }
+        Write-Host 'Servidor instalado respondendo, login padrão ok.'
+
+    - name: Atualizar por cima (mantém os dados)
+      shell: pwsh
+      run: |
+        $setup = (Get-ChildItem build\installer\TaskFlow-Setup-*.exe).FullName
+        $p = Start-Process $setup -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\atualizacao.log"
+        if ($p.ExitCode -ne 0) { Get-Content atualizacao.log -Tail 60; throw "Atualização falhou ($($p.ExitCode))" }
+        $base = 'http://localhost:8090'
+        $login = Invoke-RestMethod -Method Post "$base/api/collections/users/auth-with-password" -ContentType 'application/json' -Body '{"identity":"sa","password":"256318"}'
+        $id = (Get-Content cliente.txt).Trim()
+        Invoke-RestMethod "$base/api/collections/clients/records/$id" -Headers @{ Authorization = $login.token } | Out-Null
+        if (-not (Get-ChildItem C:\ProgramData\TaskFlow\atualizacoes -Recurse -Filter data.db)) { throw 'Cópia do banco antes da atualização ausente' }
+        Write-Host 'Atualização manteve os dados.'
+
+    - name: Desinstalar
+      shell: pwsh
+      run: |
+        $p = Start-Process 'C:\Program Files\TaskFlow\unins000.exe' -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/DELETEDATA=1'
+        for ($i = 0; $i -lt 30 -and (Test-Path 'C:\Program Files\TaskFlow\unins000.exe'); $i++) { Start-Sleep 1 }
+        if (Get-Service TaskFlow -ErrorAction SilentlyContinue) { throw 'Serviço não foi removido' }
+        if (Get-NetFirewallRule -DisplayName TaskFlow -ErrorAction SilentlyContinue) { throw 'Regra de firewall não foi removida' }
+        if (Test-Path C:\ProgramData\TaskFlow) { throw 'Dados não foram apagados' }
+        Write-Host 'Desinstalação limpa.'
+
+    - name: Logs da instalação
+      if: failure()
+      shell: pwsh
+      run: |
+        Get-Content instalacao.log, atualizacao.log -ErrorAction SilentlyContinue | Select-Object -Last 120
+        Get-ChildItem C:\ProgramData\TaskFlow\logs -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "--- $($_.Name)"; Get-Content $_.FullName -Tail 40 }
+
+    - name: Publicar o instalador como artefato
+      uses: actions/upload-artifact@v4
+      with:
+        name: TaskFlow-Setup
+        path: build/installer/TaskFlow-Setup-*.exe
+        if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: instalador_windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: TaskFlow-Setup
+
+    - name: Criar a release com o instalador
+      uses: softprops/action-gh-release@v2
+      with:
+        files: TaskFlow-Setup-*.exe
+        generate_release_notes: true
