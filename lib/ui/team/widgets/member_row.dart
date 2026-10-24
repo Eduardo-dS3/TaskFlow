@@ -117,7 +117,11 @@ class _Details extends StatelessWidget {
           ],
         ),
         Text(
-          [member.email, member.role].where((s) => s.isNotEmpty).join(' • '),
+          [
+            if (member.username.isNotEmpty) '@${member.username}',
+            member.email,
+            member.role,
+          ].where((s) => s.isNotEmpty).join(' • '),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),

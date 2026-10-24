@@ -25,7 +25,8 @@ class AboutCard extends StatelessWidget {
             const SizedBox(height: 12),
             const Text(
               'Backups, logs e o banco de dados ficam no painel do servidor. '
-              'Entre com o e-mail e a senha criados na configuração inicial.',
+              'O acesso inicial é sa@taskflow.local com a senha 256318; '
+              'troque essa senha no próprio painel depois de entrar.',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),

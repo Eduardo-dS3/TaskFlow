@@ -13,6 +13,7 @@ Member memberFromRecord(RecordModel record) {
     name: name.isEmpty ? email : name,
     role: record.getStringValue('role'),
     email: email,
+    username: record.getStringValue('username'),
     isAdmin: record.getBoolValue('isAdmin'),
     active: record.getBoolValue('active'),
     weeklyCapacity: capacity > 0 ? capacity : 40,
@@ -28,6 +29,7 @@ Member unknownMember(String id) =>
 Map<String, dynamic> memberToBody(Member member) => {
   'name': member.name.trim(),
   'email': member.email.trim(),
+  'username': member.username.trim(),
   'role': member.role.trim(),
   'isAdmin': member.isAdmin,
   'active': member.active,

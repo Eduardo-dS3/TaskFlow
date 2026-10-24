@@ -53,19 +53,19 @@ class AuthRepositoryRemote extends AuthRepository {
       body: {'name': name.trim(), 'email': email.trim(), 'password': password},
     );
     if (result case Error(:final error)) return Result.error(error);
-    return login(email: email, password: password);
+    return login(identity: email, password: password);
   }
 
   @override
   Future<Result<void>> login({
-    required String email,
+    required String identity,
     required String password,
   }) async {
-    final result = await _api.authWithPassword(email.trim(), password);
+    final result = await _api.authWithPassword(identity.trim(), password);
     return switch (result) {
       Ok() => const Result.ok(null),
       Error(error: ApiException(statusCode: 400)) => Result.error(
-        ApiException('E-mail ou senha incorretos.', statusCode: 400),
+        ApiException('Usuário ou senha incorretos.', statusCode: 400),
       ),
       Error(error: ApiException(statusCode: 403)) => Result.error(
         ApiException(

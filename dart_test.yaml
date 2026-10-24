@@ -1,0 +1,4 @@
+tags:
+  integration:
+    # Sobe um PocketBase real; pulado se não houver binário em server/.
+    timeout: 2x

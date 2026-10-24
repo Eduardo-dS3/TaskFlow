@@ -16,13 +16,13 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  final _identity = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
 
   @override
   void dispose() {
-    _email.dispose();
+    _identity.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -30,7 +30,7 @@ class _LoginFormState extends State<LoginForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     widget.viewModel.login.execute((
-      email: _email.text,
+      identity: _identity.text,
       password: _password.text,
     ));
   }
@@ -50,16 +50,15 @@ class _LoginFormState extends State<LoginForm> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Use o e-mail e a senha cadastrados pelo administrador.',
+              'Use o usuário (ou e-mail) e a senha cadastrados pelo administrador.',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
             TextFormField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(labelText: 'E-mail'),
-              validator: Validators.email,
+              controller: _identity,
+              autofillHints: const [AutofillHints.username],
+              decoration: const InputDecoration(labelText: 'Usuário ou e-mail'),
+              validator: (v) => Validators.required(v, 'o usuário ou e-mail'),
             ),
             const SizedBox(height: 12),
             TextFormField(

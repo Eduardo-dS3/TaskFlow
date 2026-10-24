@@ -5,6 +5,7 @@ class Member {
     required this.name,
     required this.role,
     this.email = '',
+    this.username = '',
     this.isAdmin = false,
     this.active = true,
     this.weeklyCapacity = 40,
@@ -20,6 +21,9 @@ class Member {
   /// Cargo ou função (ex.: "Product Manager").
   final String role;
   final String email;
+
+  /// Nome de usuário opcional, aceito no login no lugar do e-mail.
+  final String username;
 
   /// Administradores gerenciam a equipe e as configurações gerais.
   final bool isAdmin;
@@ -43,6 +47,7 @@ class Member {
     String? name,
     String? role,
     String? email,
+    String? username,
     bool? isAdmin,
     bool? active,
     double? weeklyCapacity,
@@ -52,6 +57,7 @@ class Member {
     name: name ?? this.name,
     role: role ?? this.role,
     email: email ?? this.email,
+    username: username ?? this.username,
     isAdmin: isAdmin ?? this.isAdmin,
     active: active ?? this.active,
     weeklyCapacity: weeklyCapacity ?? this.weeklyCapacity,

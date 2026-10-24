@@ -17,11 +17,11 @@ class AuthRepositoryLocal extends AuthRepository {
     required String name,
     required String email,
     required String password,
-  }) => login(email: email, password: password);
+  }) => login(identity: email, password: password);
 
   @override
   Future<Result<void>> login({
-    required String email,
+    required String identity,
     required String password,
   }) async {
     _authenticated = true;

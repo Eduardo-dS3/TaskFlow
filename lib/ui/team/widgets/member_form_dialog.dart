@@ -37,6 +37,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.member?.name);
   late final _email = TextEditingController(text: widget.member?.email);
+  late final _username = TextEditingController(text: widget.member?.username);
   late final _role = TextEditingController(text: widget.member?.role);
   late final _capacity = TextEditingController(
     text: (widget.member?.weeklyCapacity ?? 40).round().toString(),
@@ -48,7 +49,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
 
   @override
   void dispose() {
-    for (final c in [_name, _email, _role, _capacity, _password]) {
+    for (final c in [_name, _email, _username, _role, _capacity, _password]) {
       c.dispose();
     }
     super.dispose();
@@ -72,6 +73,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
         NewMember(
           name: _name.text.trim(),
           email: _email.text.trim(),
+          username: _username.text.trim(),
           role: _role.text.trim(),
           password: _password.text,
           isAdmin: _isAdmin,
@@ -85,6 +87,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
       member.copyWith(
         name: _name.text.trim(),
         email: _email.text.trim(),
+        username: _username.text.trim(),
         role: _role.text.trim(),
         isAdmin: _isAdmin,
         weeklyCapacity: capacity,
@@ -129,6 +132,15 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
         keyboardType: TextInputType.emailAddress,
         decoration: const InputDecoration(labelText: 'E-mail (login)'),
         validator: Validators.email,
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _username,
+        decoration: const InputDecoration(
+          labelText: 'Usuário (opcional)',
+          helperText: 'Login curto aceito no lugar do e-mail. Ex.: joana',
+        ),
+        validator: Validators.username,
       ),
       const SizedBox(height: 12),
       TextFormField(

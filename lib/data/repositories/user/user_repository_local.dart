@@ -63,15 +63,22 @@ class UserRepositoryLocal implements UserRepository {
 
   @override
   Future<Result<Member>> createMember(NewMember data) async {
+    final email = data.email.trim().toLowerCase();
+    final username = data.username.trim().toLowerCase();
     final exists = _service.members.any(
-      (m) => m.email.toLowerCase() == data.email.trim().toLowerCase(),
+      (m) =>
+          m.email.toLowerCase() == email ||
+          (username.isNotEmpty && m.username.toLowerCase() == username),
     );
-    if (exists) return Result.error(Exception('E-mail já cadastrado'));
+    if (exists) {
+      return Result.error(Exception('E-mail ou usuário já cadastrado'));
+    }
     final member = Member(
       id: _service.newId('u'),
       name: data.name.trim(),
       role: data.role.trim(),
       email: data.email.trim(),
+      username: data.username.trim(),
       isAdmin: data.isAdmin,
       weeklyCapacity: data.weeklyCapacity,
     );

@@ -105,6 +105,7 @@ class UserRepositoryRemote implements UserRepository {
     _api.create(_users, {
       'name': data.name.trim(),
       'email': data.email.trim(),
+      'username': data.username.trim(),
       'role': data.role.trim(),
       'password': data.password,
       'passwordConfirm': data.password,

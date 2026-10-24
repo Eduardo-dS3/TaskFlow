@@ -18,6 +18,7 @@ class ApiException implements Exception {
 const _fieldLabels = {
   'name': 'Nome',
   'email': 'E-mail',
+  'username': 'Usuário',
   'password': 'Senha',
   'passwordConfirm': 'Confirmação de senha',
   'oldPassword': 'Senha atual',
@@ -31,6 +32,8 @@ const _fieldLabels = {
 const _codeMessages = {
   'validation_not_unique': 'já está em uso',
   'validation_required': 'é obrigatório',
+  'validation_invalid_format': 'tem formato inválido',
+  'validation_min_text_constraint': 'é curto demais',
   'validation_invalid_email': 'não é um e-mail válido',
   'validation_invalid_old_password': 'está incorreta',
   'validation_values_mismatch': 'não confere',

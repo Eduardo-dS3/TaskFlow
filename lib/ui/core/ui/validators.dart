@@ -12,6 +12,13 @@ abstract final class Validators {
     return valid ? null : 'E-mail inválido.';
   }
 
+  /// Nome de usuário opcional: letras, números, ponto, hífen e sublinhado.
+  static String? username(String? value) {
+    final text = value?.trim() ?? '';
+    final valid = RegExp(r'^[a-zA-Z0-9._-]*$').hasMatch(text);
+    return valid ? null : 'Use só letras, números, ponto, hífen ou sublinhado.';
+  }
+
   static String? password(String? value) {
     if (value == null || value.isEmpty) return 'Informe a senha.';
     return value.length < minPasswordLength

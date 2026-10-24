@@ -8,6 +8,7 @@ class NewMember {
     required this.email,
     required this.role,
     required this.password,
+    this.username = '',
     this.isAdmin = false,
     this.weeklyCapacity = 40,
   });
@@ -16,6 +17,9 @@ class NewMember {
   final String email;
   final String role;
   final String password;
+
+  /// Nome de usuário opcional para o login.
+  final String username;
   final bool isAdmin;
   final double weeklyCapacity;
 }

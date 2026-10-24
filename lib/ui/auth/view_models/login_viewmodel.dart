@@ -8,7 +8,7 @@ import '../../../utils/result.dart';
 typedef SetupData = ({String name, String email, String password});
 
 /// Dados de acesso informados na tela de login.
-typedef Credentials = ({String email, String password});
+typedef Credentials = ({String identity, String password});
 
 /// Login e configuração inicial do servidor.
 class LoginViewModel extends ChangeNotifier {
@@ -40,7 +40,7 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   Future<Result<void>> _login(Credentials credentials) => _authRepository.login(
-    email: credentials.email,
+    identity: credentials.identity,
     password: credentials.password,
   );
 
