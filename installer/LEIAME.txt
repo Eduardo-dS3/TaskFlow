@@ -1,0 +1,70 @@
+﻿TaskFlow - servidor para Windows
+================================
+
+O TaskFlow roda como um serviço do Windows chamado "TaskFlow". Ele inicia
+junto com o computador e reinicia sozinho se parar por algum erro.
+
+ACESSO
+------
+Neste computador:          http://localhost:8090
+Nos outros computadores:   http://IP-DESTE-SERVIDOR:8090
+
+(8090 é a porta padrão; use a porta escolhida na instalação.)
+Para descobrir o IP deste servidor, abra o Prompt de Comando e digite
+"ipconfig" (veja o "Endereço IPv4"). Vale reservar esse IP no roteador para
+que ele não mude.
+
+PRIMEIRO ACESSO
+---------------
+Usuário: sa
+Senha:   256318
+
+Depois de entrar, troque a senha em Configurações e cadastre a equipe em
+Equipe. Cada pessoa pode entrar com o e-mail ou com o nome de usuário.
+
+PAINEL DO SERVIDOR (avançado)
+-----------------------------
+http://localhost:8090/_/  -  e-mail sa@taskflow.local, senha 256318.
+No painel ficam os backups, os registros (logs) e o banco de dados.
+Troque também essa senha: no painel, clique no menu de superusuários
+(ícone de escudo) > sa@taskflow.local > altere a senha.
+
+ONDE FICAM OS DADOS
+-------------------
+C:\ProgramData\TaskFlow\pb_data      banco de dados e anexos
+C:\ProgramData\TaskFlow\pb_data\backups   backups automáticos (todo dia às 3h,
+                                          os 14 mais recentes)
+C:\ProgramData\TaskFlow\logs         registros do serviço
+C:\ProgramData\TaskFlow\atualizacoes cópia do banco feita antes de cada
+                                     atualização
+
+A pasta é protegida: só administradores do Windows conseguem abri-la.
+Recomendado: copie os backups para outro disco ou para a nuvem de vez em
+quando (eles também podem ser baixados pelo painel do servidor).
+
+ATUALIZAR
+---------
+Execute o instalador da nova versão neste computador. O serviço é parado,
+o banco é copiado para a pasta "atualizacoes", os arquivos são trocados e o
+serviço volta a rodar. Os dados e os usuários são mantidos.
+
+DESINSTALAR
+-----------
+Configurações do Windows > Aplicativos > TaskFlow > Desinstalar.
+Você escolhe se os dados devem ser apagados ou mantidos.
+
+PROBLEMAS COMUNS
+----------------
+- Não abre nos outros computadores: confira o IP, se a porta está liberada
+  no firewall (o instalador cria a regra "TaskFlow") e se os computadores
+  estão na mesma rede.
+- Não abre nem neste computador: abra "Serviços" do Windows (services.msc),
+  procure "TaskFlow" e clique em Iniciar. Veja os registros na pasta logs.
+- Esqueceu a senha do administrador: entre no painel do servidor, abra a
+  coleção "users" e defina uma nova senha para o usuário.
+
+SEGURANÇA
+---------
+O TaskFlow foi pensado para a rede interna. Para acessar pela internet, use
+uma VPN (por exemplo, Tailscale ou ZeroTier) em vez de abrir a porta no
+roteador.
